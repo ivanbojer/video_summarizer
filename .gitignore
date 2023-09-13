@@ -163,3 +163,5 @@ config.json
 subtitles_raw.txt
 .gitignore
 subtitles.txt
+temp_*
+config-openai.json
