@@ -2,7 +2,6 @@ from youtube_transcript_api import YouTubeTranscriptApi
 import ignoreSSL
 
 import openai
-import os
 import json
 import tiktoken
 
@@ -24,7 +23,8 @@ openai.api_key = config_details['OPENAI_API_KEY']
 
 # gpt-3.5-turbo-16k
 # gpt-3.5-turbo
-def get_completion(prompt, model="gpt-3.5-turbo"):
+def get_completion(prompt, file_name=None, model="gpt-3.5-turbo"):
+    print ("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(
         model=model,
@@ -32,6 +32,11 @@ def get_completion(prompt, model="gpt-3.5-turbo"):
         temperature=0, # this is the degree of randomness of the model's output,
         # engine=config_details['CHAT_GPT_MODEL']
     )
+
+    if file_name:
+        f_out = open(file_name, "w")
+        f_out.write( response.choices[0].message["content"] )
+        f_out.close()
     return response.choices[0].message["content"]
 
 
@@ -57,7 +62,8 @@ def download_transcript(video_id="hlNHL5H5FtI"):
     # of dictionaries obtained by the get_transcript() function
     # NhqYqVZLC1A
     # w4WcTX-PNtU
-    # hlNHL5H5FtI&t=22s
+    # hlNHL5H5FtI
+    # '99tkOvP3QAA'
     srt = YouTubeTranscriptApi.get_transcript( video_id )
     
     # prints the result
@@ -106,7 +112,7 @@ def summarize_transcript_in_batches(text):
         The text delimited by triple backticks in the context that it \
         is a youtube script for a narrated video. The video itself contains daily \
         updates on the stock market and personal stories. Summarise the text. Extract any updates about any particular stock \
-        or company and in particular Gamestop (ticker: GME). Look for \
+        or any company mentioned and in particular Gamestop (ticker: GME). Look for \
         any strategies on how to trade options or mention of the name 'Ryan Cohen'.
         
         Text:
@@ -114,7 +120,7 @@ def summarize_transcript_in_batches(text):
         """
 
         # print_response(prompt, text)
-        print ("Batch #{}, nr. of tokens: {}, string len: {}".format( count, num_tokens_from_string(prompt), len(prompt) ))
+        print ("Batch #{}".format( count ) )
         response = get_completion(prompt)
         summary_batches.append( "- {}\n".format( response ) )
 
@@ -133,6 +139,7 @@ def summarize_transcript_in_batches(text):
 
 def create_final_summary(text):
     print ("Creating final summary...")
+
     #     7 - Provide same steps as JSON string with \
     # the following keys: title, long_summary, performance, sentiment, emotions
     prompt = f"""
@@ -147,38 +154,76 @@ def create_final_summary(text):
     lower-case words separated by commas.
     5 - Identify a list of emotions in the text? Format your answer as a list of \
     lower-case words separated by commas.
+    6 - Write Key Notes from the summary
+    7 - Write a Step-by-Step Guide from the Notes
+    8 - Write a Blog post from the Notes
+    9 - Create Midjourney prompts from the Notes
+    10 - Create DALLE prompts from the Notes
     
-    Use the following format and make sure that maximum line width is no more than 80 characters:
+    Use the following format:
+
     Title:
+    '''
     Step 1 here
+    '''
  
     Summary:
+    '''
     Step 2 here
+    '''
 
     Performance:
+    '''
     Step 3 here
+    '''
 
     Sentiment:
+    '''
     Step 4 here
+    '''
 
     Emotions:
+    '''
     Step 5 here
+    '''
+
+    Key Notes:
+    '''
+    Step 6 here
+    '''
+
+    Step-by-step guide:
+    '''
+    Step 7 here
+    '''
+
+    Blog post:
+    '''
+    Step 8 here
+    '''
+
+    Midjourney prompts:
+    '''
+    Step 9 here
+    '''
+
+    DALLE prompts:
+    '''
+    Step 10 here
+    '''
 
     Text:
     ```{text}```
     """
-    
-    print ("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
-    response = get_completion(prompt)
-    f_out = open(FILE_FINAL_SUMMARY, "w")
-    f_out.write( response )
-    f_out.close()
 
+    response = get_completion(prompt, file_name=FILE_FINAL_SUMMARY)
     print ("Done [filename: {}]!".format(FILE_FINAL_SUMMARY) )
+
+    return response
 
 if __name__ == "__main__":
     # with ignoreSSL.no_ssl_verification():
-    transcript = download_transcript( '99tkOvP3QAA' )
-    summary_batches = summarize_transcript_in_batches( transcript )
+    # transcript = download_transcript( '1gQ52CDffwc' ) # 'w4WcTX-PNtU' subtitles not ready
+    # summary_batches = summarize_transcript_in_batches( transcript )
     summaries = load_summary_batches()
-    create_final_summary( summaries )
+    response = create_final_summary( summaries )

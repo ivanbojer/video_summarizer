@@ -165,3 +165,5 @@ subtitles_raw.txt
 subtitles.txt
 temp_*
 config-openai.json
+token.json
+config-tweeter.json
