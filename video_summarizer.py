@@ -23,7 +23,7 @@ openai.api_key = config_details['OPENAI_API_KEY']
 
 # gpt-3.5-turbo-16k
 # gpt-3.5-turbo
-def get_completion(prompt, file_name=None, model="gpt-3.5-turbo"):
+def get_completion(prompt, file_name=None, model=config_details['CHAT_GPT_MODEL']):
     print ("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(
@@ -44,7 +44,7 @@ def num_tokens_from_string(string: str) -> int:
     global enc
 
     if not enc:
-        enc = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        enc = tiktoken.encoding_for_model( config_details['CHAT_GPT_MODEL'] )
 
     """Returns the number of tokens in a text string."""
     num_tokens = len(enc.encode(string))

@@ -2,6 +2,7 @@ from requests_oauthlib import OAuth1Session
 import os
 import json
 import webbrowser
+import ignoreSSL
 
 # Load config values
 with open(r'config-tweeter.json') as config_file:
@@ -106,6 +107,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with ignoreSSL.no_ssl_verification():
+        main()
 
     #1702139292334936064DJLoky16
