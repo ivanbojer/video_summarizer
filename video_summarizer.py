@@ -13,24 +13,24 @@ FILE_VIDEO_SUBTITLES_RAW = "temp_video_subtitles-raw.txt"
 enc = None
 
 # Load config values
-with open(r'config-openai.json') as config_file:
+with open(r'config.json') as config_file:
     config_details = json.load(config_file)
 # //os.getenv("OPENAI_API_KEY")
-openai.api_key = config_details['OPENAI_API_KEY']
-# openai.api_base = config_details['OPENAI_API_BASE']
-# openai.api_version = config_details['OPENAI_API_VERSION']
-# openai.api_type = config_details['OPENAI_API_TYPE']
+openai.api_key = config_details['OA_OPENAI_API_KEY']
+# openai.api_base = config_details['MS_OPENAI_API_BASE']
+# openai.api_version = config_details['MS_OPENAI_API_VERSION']
+# openai.api_type = config_details['MS_OPENAI_API_TYPE']
 
 # gpt-3.5-turbo-16k
 # gpt-3.5-turbo
-def get_completion(prompt, file_name=None, model=config_details['CHAT_GPT_MODEL']):
+def get_completion(prompt, file_name=None, model=config_details['OA_CHAT_GPT_MODEL']):
     print ("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(
         model=model,
         messages=messages,
         temperature=0, # this is the degree of randomness of the model's output,
-        # engine=config_details['CHAT_GPT_MODEL']
+        # engine=config_details['MS_CHAT_GPT_MODEL']
     )
 
     if file_name:
@@ -44,7 +44,7 @@ def num_tokens_from_string(string: str) -> int:
     global enc
 
     if not enc:
-        enc = tiktoken.encoding_for_model( config_details['CHAT_GPT_MODEL'] )
+        enc = tiktoken.encoding_for_model( config_details['OA_CHAT_GPT_MODEL'] )
 
     """Returns the number of tokens in a text string."""
     num_tokens = len(enc.encode(string))
@@ -222,8 +222,17 @@ def create_final_summary(text):
     return response
 
 if __name__ == "__main__":
-    # with ignoreSSL.no_ssl_verification():
-    # transcript = download_transcript( '1gQ52CDffwc' ) # 'w4WcTX-PNtU' subtitles not ready
-    # summary_batches = summarize_transcript_in_batches( transcript )
-    summaries = load_summary_batches()
-    response = create_final_summary( summaries )
+    if config_details['IGNORE_SSL']:
+        print ( "ignore SSL" )
+        with ignoreSSL.no_ssl_verification():
+            transcript = download_transcript( 'w4WcTX-PNtU' ) # 'w4WcTX-PNtU' subtitles not ready
+            print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
+            summary_batches = summarize_transcript_in_batches( transcript )
+            summaries = load_summary_batches()
+            response = create_final_summary( summaries )
+
+            # import whisper_mgr as w
+
+            # transcription = w.transcribe_audio( '99tkOvP3QAA.mp3' )
+            # response = create_final_summary( transcription )
+            # print (response )
