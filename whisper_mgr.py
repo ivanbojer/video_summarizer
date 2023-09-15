@@ -1,8 +1,10 @@
 from __future__ import unicode_literals
-import youtube_dl
+import yt_dlp as downloader
 import openai
 import json
 import ignoreSSL
+
+file_name = None
 
 class MyLogger(object):
     def debug(self, msg):
@@ -15,8 +17,10 @@ class MyLogger(object):
         print(msg)
 
 
-def my_hook(d):
+def yt_dlp_monitor(d):
+    global file_name
     if d['status'] == 'finished':
+        file_name = d['filename']
         print('Done downloading, now converting ...')
 
 with open(r'config.json') as config_file:
@@ -40,40 +44,41 @@ def transcribe_audio( file_name = MEDIA_FILENAME ):
 
 def download_audio( video_id ):
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
+        'format': 'm4a/bestaudio/best',
+        "progress_hooks": [yt_dlp_monitor],  # here's the function we just defined
+        # See help(yt_dlp.postprocessor) for a list of available Postprocessors and their arguments
+        'postprocessors': [{  # Extract audio using ffmpeg
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
-            'preferredquality': '192',
-        }],
-        # 'postprocessor_args': [
-        #     '-ar', '16000'
-        # ],
-        'prefer_ffmpeg': True,
-        'keepvideo': True,
-        'logger': MyLogger(),
-        'progress_hooks': [my_hook]
-        }
+            'preferredcodec': 'm4a',
+        }]
+    }
 
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+
+    with downloader.YoutubeDL(ydl_opts) as ydl:
         print( "Video URL: https://www.youtube.com/watch?v={}".format( video_id ) )
         ydl.download(["https://www.youtube.com/watch?v={}".format( video_id )])
 
 
+    global file_name
+    return file_name    
+
+
 
 def main():
-    if config_details['IGNORE_SSL']:
-        print ( "ignore SSL" )
-        with ignoreSSL.no_ssl_verification():
+    file_name = download_audio( '99tkOvP3QAA' )
+    print( 'File name: {}'.format( file_name) )
 
-            # download_audio( '99tkOvP3QAA' )
-            translation_txt = transcribe_audio( '99tkOvP3QAA.mp3'  )
+    translation_txt = transcribe_audio( file_name  )
+    print ( translation_txt )
 
-            with open(TRANSLATION_FILENAME, 'w') as f_out:
-                f_out.write( translation_txt )
-
-            print ( translation_txt )
+    with open(TRANSLATION_FILENAME, 'w') as f_out:
+        f_out.write( translation_txt )
 
 
 if __name__ == "__main__":
-    main()
+    if config_details['IGNORE_SSL']:
+        print ( "ignore SSL" )
+        with ignoreSSL.no_ssl_verification():
+             main()
+    else:
+        main()

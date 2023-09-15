@@ -21,6 +21,13 @@ openai.api_key = config_details['OA_OPENAI_API_KEY']
 # openai.api_version = config_details['MS_OPENAI_API_VERSION']
 # openai.api_type = config_details['MS_OPENAI_API_TYPE']
 
+
+def save_file( file_name, content):
+    if file_name:
+        with open(file_name, "w") as f_out:
+            f_out.write( content )
+
+        
 # gpt-3.5-turbo-16k
 # gpt-3.5-turbo
 def get_completion(prompt, file_name=None, model=config_details['OA_CHAT_GPT_MODEL']):
@@ -37,6 +44,7 @@ def get_completion(prompt, file_name=None, model=config_details['OA_CHAT_GPT_MOD
         f_out = open(file_name, "w")
         f_out.write( response.choices[0].message["content"] )
         f_out.close()
+
     return response.choices[0].message["content"]
 
 
@@ -60,32 +68,16 @@ def print_response(prompt, text=None):
 def download_transcript(video_id="hlNHL5H5FtI"): 
     # assigning srt variable with the list
     # of dictionaries obtained by the get_transcript() function
-    # NhqYqVZLC1A
-    # w4WcTX-PNtU
-    # hlNHL5H5FtI
-    # '99tkOvP3QAA'
     srt = YouTubeTranscriptApi.get_transcript( video_id )
-    
-    # prints the result
-    # print(srt)
 
     # creating or overwriting a file "subtitles.txt" with
     # the info inside the context manager
-    with open(FILE_VIDEO_SUBTITLES, "w") as f:
-        f_raw = open(FILE_VIDEO_SUBTITLES_RAW, "w")
-        # iterating through each element of list srt
-        for i in srt:
-            # writing each element of srt on a new line
-            f_raw.write("{}\n".format(i))
-            f.write("{} ".format(i['text']))
+    text = text_raw = ''
+    for i in srt:
+        text_raw = text_raw + "{}\n".format(i)
+        text = text + " {} ".format(i['text'])
 
-        f_raw.close()
-
-    text = None
-    with open(FILE_VIDEO_SUBTITLES, 'r') as file:
-        text = file.read()
-
-    return text
+    return text, text_raw
 
 
 def load_summary_batches():
@@ -95,7 +87,7 @@ def load_summary_batches():
     return text
 
 
-def summarize_transcript_in_batches(text):
+def summarize_transcript_in_batches( text ):
     summary_batches = []
 
     # Setting batch size and context size
@@ -129,12 +121,7 @@ def summarize_transcript_in_batches(text):
         # if count > 1:
         #     break
 
-    f_out = open(FILE_SUMMARY_BATCHES, "w")
-    for r in summary_batches:
-        f_out.write( r )
-    f_out.close()
-
-    return summary_batches
+    return ' '.join(summary_batches)
 
 
 def create_final_summary(text):
@@ -221,18 +208,37 @@ def create_final_summary(text):
 
     return response
 
+
+def main():
+    DEBUG = True
+
+    transcript, transcript_raw = download_transcript( 'w4WcTX-PNtU' ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
+
+    print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
+    summary_batches = summarize_transcript_in_batches( transcript )
+
+    response = create_final_summary( summary_batches )
+
+    with open(FILE_FINAL_SUMMARY, "w") as f_out:
+            f_out.write( response )
+
+    if DEBUG:
+        with open(FILE_VIDEO_SUBTITLES, "w") as f_out:
+            f_out.write( transcript )
+
+        with open(FILE_SUMMARY_BATCHES, "w") as f_out:
+            f_out.write( summary_batches )
+
+    # import whisper_mgr as w
+
+    # transcription = w.transcribe_audio( '99tkOvP3QAA.mp3' )
+    # response = create_final_summary( transcription )
+    # print (response )
+
 if __name__ == "__main__":
     if config_details['IGNORE_SSL']:
         print ( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
-            transcript = download_transcript( 'w4WcTX-PNtU' ) # 'w4WcTX-PNtU' subtitles not ready
-            print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
-            summary_batches = summarize_transcript_in_batches( transcript )
-            summaries = load_summary_batches()
-            response = create_final_summary( summaries )
-
-            # import whisper_mgr as w
-
-            # transcription = w.transcribe_audio( '99tkOvP3QAA.mp3' )
-            # response = create_final_summary( transcription )
-            # print (response )
+            main()
+    else:
+        main()
