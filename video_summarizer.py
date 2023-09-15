@@ -2,6 +2,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import TranscriptsDisabled
 import ignoreSSL
 import whisper_mgr as whisper
+import chunk_media as file_chunker
 
 import openai
 import json
@@ -76,7 +77,11 @@ def download_transcript(video_id="hlNHL5H5FtI"):
     except TranscriptsDisabled as e:
         print( "Transcripts not enabled of not generated. Falling back to whisper...")
         file_name = whisper.download_audio( video_id )
-        translation_txt = whisper.transcribe_audio( file_name  )
+        file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
+
+        translation_txt = ""
+        for file in file_chunk_names:
+            translation_txt = translation_txt + whisper.transcribe_audio( file  )
 
         return translation_txt, None
 
@@ -101,7 +106,7 @@ def summarize_transcript_in_batches( text ):
     summary_batches = []
 
     # Setting batch size and context size
-    batch_size = 3000
+    batch_size = 2500
 
     # Tokenize the script
     script_tokens = text.split(" ")
