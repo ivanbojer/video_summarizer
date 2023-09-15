@@ -1,5 +1,7 @@
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import TranscriptsDisabled
 import ignoreSSL
+import whisper_mgr as whisper
 
 import openai
 import json
@@ -68,7 +70,15 @@ def print_response(prompt, text=None):
 def download_transcript(video_id="hlNHL5H5FtI"): 
     # assigning srt variable with the list
     # of dictionaries obtained by the get_transcript() function
-    srt = YouTubeTranscriptApi.get_transcript( video_id )
+
+    try:
+        srt = YouTubeTranscriptApi.get_transcript( video_id )
+    except TranscriptsDisabled as e:
+        print( "Transcripts not enabled of not generated. Falling back to whisper...")
+        file_name = whisper.download_audio( video_id )
+        translation_txt = whisper.transcribe_audio( file_name  )
+
+        return translation_txt, None
 
     # creating or overwriting a file "subtitles.txt" with
     # the info inside the context manager
@@ -212,7 +222,7 @@ def create_final_summary(text):
 def main():
     DEBUG = True
 
-    transcript, transcript_raw = download_transcript( 'w4WcTX-PNtU' ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
+    transcript, transcript_raw = download_transcript( '1AbToBYhY20' ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
 
     print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
     summary_batches = summarize_transcript_in_batches( transcript )
