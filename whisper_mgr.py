@@ -30,6 +30,7 @@ MEDIA_FILENAME = 'temp_audio_file.mp3'
 TRANSLATION_FILENAME = 'temp_audio_file_transcript.txt'
 
 def transcribe_audio( file_name = MEDIA_FILENAME ):
+    print('Transcribing file_name: {}'.format( file_name ) )
     f_media = open( file_name, 'rb')
 
     response = openai.Audio.transcribe(
@@ -61,6 +62,9 @@ def download_audio( video_id ):
         ydl.download(["https://www.youtube.com/watch?v={}".format( video_id )])
 
     global file_name
+
+    extension = '.' + file_name.split('.')[-1]
+    file_name = file_name.replace(extension, '.mp3')
     return file_name    
 
 
