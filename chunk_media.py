@@ -1,6 +1,6 @@
 from pydub import AudioSegment
 
-def chunk_audio_file(audio_file_path='test.mp3', chunk_size_in_minutes=20):
+def chunk_audio_file(audio_file_path='test.mp3', chunk_size_in_minutes=10):
     audio_extension = audio_file_path.split('.')[-1]
     audio_file = AudioSegment.from_mp3( audio_file_path )
     output_prefix = '{}_chunk_'.format( audio_file_path.split('.')[0] )
