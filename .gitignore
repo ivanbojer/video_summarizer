@@ -167,3 +167,4 @@ temp_*
 config-openai.json
 token.json
 config-tweeter.json
+.DS_Store
