@@ -168,3 +168,4 @@ config-openai.json
 token.json
 config-tweeter.json
 .DS_Store
+HEALING_MUSIC_DOWNLOAD.txt
