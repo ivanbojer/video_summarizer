@@ -3,15 +3,16 @@ from youtube_transcript_api import TranscriptsDisabled
 import ignoreSSL
 import whisper_mgr as whisper
 import chunk_media as file_chunker
+from tweeter_mgr import TweeterMgr
 
 import openai
 import json
 import tiktoken
 
-FILE_SUMMARY_BATCHES = "temp_summary_batches.txt"
-FILE_FINAL_SUMMARY = "temp_FINAL_SUMMARY.txt"
-FILE_VIDEO_SUBTITLES = "temp_video_subtitles.txt"
-FILE_VIDEO_SUBTITLES_RAW = "temp_video_subtitles-raw.txt"
+FILE_SUMMARY_BATCHES = "temp_data/temp_summary_batches.txt"
+FILE_FINAL_SUMMARY = "video_FINAL_SUMMARY.txt"
+FILE_VIDEO_SUBTITLES = "temp_data/temp_video_subtitles.txt"
+FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
 
 enc = None
 
@@ -117,7 +118,8 @@ def summarize_transcript_in_batches( text ):
 
         prompt = f"""
         The text delimited by triple backticks in the context that it \
-        is a youtube script for a narrated video. The video itself contains daily \
+        is a youtube script for a narrated video. The narrator name is Uncle Bruce.\
+        The video itself contains daily \
         updates on the stock market and personal stories. Summarise the text. Extract any updates about any particular stock \
         or any company mentioned and in particular Gamestop (ticker: GME). Look for \
         any strategies on how to trade options or mention of the name 'Ryan Cohen'.
@@ -137,6 +139,23 @@ def summarize_transcript_in_batches( text ):
         #     break
 
     return ' '.join(summary_batches)
+
+
+def extract_blog_section( text):
+    HEADER = 'Blog post:\n\'\'\'\nTitle:'
+
+    # first find the beginnig of the blog
+    # add title to it too as we have set format
+    start = text.index(HEADER)
+    start = start + len (HEADER)
+    end = text.index( '\n', start)
+
+    # get the title
+    title = text[start:end]
+    # skip the title and find the end of text
+    start = start + len(title) + 2 #2 escapes
+    end = text.index('\'\'\'', start)
+    return title, text[start:end]
 
 
 def create_final_summary(text):
@@ -227,28 +246,32 @@ def create_final_summary(text):
 def main():
     DEBUG = True
 
-    transcript, transcript_raw = download_transcript( '1AbToBYhY20' ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
+    # transcript, transcript_raw = download_transcript( '7mv3qMHogrw' ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
 
-    print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
-    summary_batches = summarize_transcript_in_batches( transcript )
+    # print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
+    # summary_batches = summarize_transcript_in_batches( transcript )
 
-    response = create_final_summary( summary_batches )
+    # response = create_final_summary( summary_batches )
 
-    with open(FILE_FINAL_SUMMARY, "w") as f_out:
-            f_out.write( response )
+    # with open(FILE_FINAL_SUMMARY, "w") as f_out:
+    #         f_out.write( response )
 
-    if DEBUG:
-        with open(FILE_VIDEO_SUBTITLES, "w") as f_out:
-            f_out.write( transcript )
+    # if DEBUG:
+    #     with open(FILE_VIDEO_SUBTITLES, "w") as f_out:
+    #         f_out.write( transcript )
 
-        with open(FILE_SUMMARY_BATCHES, "w") as f_out:
-            f_out.write( summary_batches )
+    #     with open(FILE_SUMMARY_BATCHES, "w") as f_out:
+    #         f_out.write( summary_batches )
 
-    # import whisper_mgr as w
+    response = ""
+    with open(FILE_FINAL_SUMMARY, 'r') as file:
+        response = file.read()
 
-    # transcription = w.transcribe_audio( '99tkOvP3QAA.mp3' )
-    # response = create_final_summary( transcription )
-    # print (response )
+    title, text_blog = extract_blog_section( response )
+    print( 'Title:{}\n\n{}'.format( title, text_blog ) )
+
+    tw_mgr = TweeterMgr()
+    # tw_mgr.post_tweet( text_blog, title )
 
 if __name__ == "__main__":
     if config_details['IGNORE_SSL']:

@@ -11,7 +11,7 @@ class TweeterMgr():
     # export 'CONSUMER_KEY'='<your_consumer_key>'
     # export 'CONSUMER_SECRET'='<your_consumer_secret>'
 
-    MAX_TWEET_SIZE_CHARACTERS = 240
+    MAX_TWEET_SIZE_CHARACTERS = 10000
     FOOTER = " #GME #Gamestop #Superstonk"
     HEADER = " Uncle Bruce's Wisdom"
     TW_THREAD_COUNT_CHARS = len('xx/xx ')
@@ -90,43 +90,49 @@ class TweeterMgr():
         self.oauth = oauth
 
 
-    def post_tweet(self, text):
+    def post_tweet(self, text, header=None, fake_run=False):
         if not self.oauth:
             raise Exception(
                 "Not authenticated"
             )
         
-        if len(text) > self.max_tweeet_size_characters - len(self.footer):
-            return self.__post_tweet_in_chunks( text)
+        if header:
+            self.header = header
+
+        if len(text) > self.max_tweeet_size_characters - len(self.footer) - len(header):
+            return self.__post_tweet_in_chunks( text, fake_run )
         else:
             payload = {}
             payload['reply_settings'] = "mentionedUsers"
-            payload['text'] = text + self.footer
-            return self.__post_tweet( payload )
+            payload['text'] = '{}\n{}\n{}'.format(self.header, text, self.footer)
+            return self.__post_tweet( payload, fake_run )
 
 
-    def __post_tweet(self, payload):
-        # Making the request
-        response = self.oauth.post(
-            "https://api.twitter.com/2/tweets",
-            json=payload,
-        )
-
-        if response.status_code != 201:
-            raise Exception(
-                "Request returned an error: {} {}".format(response.status_code, response.text)
+    def __post_tweet(self, payload, fake_run=False):
+        json_response = None
+        if not fake_run:
+            # Making the request
+            response = self.oauth.post(
+                "https://api.twitter.com/2/tweets",
+                json= payload
             )
 
-        print("Response code: {}".format(response.status_code))
+            if response.status_code != 201:
+                raise Exception(
+                    "Request returned an error: {} {}".format(response.status_code, response.text)
+                )
 
-        # Saving the response as JSON
-        json_response = response.json()
+            print("Response code: {}".format(response.status_code))
 
+            # Saving the response as JSON
+            json_response = response.json()
+
+        print( 'Payload:{}'.format( payload['text'] ))
         return json_response
 
 
     def __split_text_in_chunks(self, text):
-        text = text.replace('\n', '')
+        # text = text.replace('\n', '')
 
         # TW_THREAD_COUNT_CHARS is for "1/2"
         # we add another 3 spacers for line breaks, etc...
@@ -141,8 +147,8 @@ class TweeterMgr():
             end = min(start + max_chunk_chars, len(text)-1)
 
             while text[end] != '.':
-                print('start:{} end:{} c:{}'.format( start, end, text[end]) )
-                print(text[start:end])
+                # print('start:{} end:{} c:{}'.format( start, end, text[end]) )
+                # print(text[start:end])
                 end = end -1
 
                 # in case that the whole sentence is greater than
@@ -156,7 +162,7 @@ class TweeterMgr():
 
             # sometime we just end up with white space and we do not need to tweet that
             if (text[start:end].strip() != ''):
-                txt_chunks.append( '{}\n{}'.format( text[start:end], self.footer ) )
+                txt_chunks.append( '{}\n{}'.format( text[start:end], self.footer ).strip() )
 
             start = end
 
@@ -165,13 +171,16 @@ class TweeterMgr():
 
         # add the header (ex. 1/5, 2/5, 10/20, ..., )
         for idx, chunk in enumerate(txt_chunks):
-            txt_chunks[idx] = '{}/{} {}\n{}'.format( idx+1, total_chunks, self.header, chunk )
+            if idx == 0:
+                txt_chunks[idx] = '{}/{} {}\n{}'.format( idx+1, total_chunks, self.header, chunk )
+            else:
+                txt_chunks[idx] = '{}/{} {}'.format( idx+1, total_chunks, chunk )
 
 
         return txt_chunks
 
 
-    def __post_tweet_in_chunks(self, text):
+    def __post_tweet_in_chunks(self, text, fake_run=False ):
         text_chunks = self.__split_text_in_chunks( text )
 
         json_response = None
@@ -186,8 +195,13 @@ class TweeterMgr():
                         "in_reply_to_tweet_id": json_response['data']['id']
                             }
                 }
+
+            print( '{}'.format( payload['text'] ))
             
-            json_response = self.__post_tweet( payload )
+            if not fake_run:
+                json_response = self.__post_tweet( payload )
+            else:
+                json_response = {'data':{'id':'FAKE RUN'}}
 
         
     def get_all_tweets(self ):
@@ -260,12 +274,22 @@ class TweeterMgr():
         # send tweet (chunk if needed)
         # post_tweet( text )
 
-        txt_chunks = self.__split_text_in_chunks(text)
-        for idx,c in enumerate(txt_chunks):
-            print('chunk #{}. len:{}'.format( idx, len(c)))
+        import video_summarizer
 
-        for idx,c in enumerate(txt_chunks):
-            print( c )
+        response = ""
+        with open(video_summarizer.FILE_FINAL_SUMMARY, 'r') as file:
+            response = file.read()
+        
+        title, text = video_summarizer.extract_blog_section( response )
+
+        self.post_tweet(text, title, True)
+
+        # txt_chunks = self.__split_text_in_chunks(text)
+        # for idx,c in enumerate(txt_chunks):
+        #     print('chunk #{}. len:{}'.format( idx, len(c)))
+
+        # for idx,c in enumerate(txt_chunks):
+        #     print( c )
 
 if __name__ == "__main__":
     with ignoreSSL.no_ssl_verification():
