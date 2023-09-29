@@ -4,15 +4,19 @@ import ignoreSSL
 import whisper_mgr as whisper
 import chunk_media as file_chunker
 from tweeter_mgr import TweeterMgr
+import datetime
 
 import openai
 import json
 import tiktoken
 
 FILE_SUMMARY_BATCHES = "temp_data/temp_summary_batches.txt"
-FILE_FINAL_SUMMARY = "video_FINAL_SUMMARY.txt"
+FILE_FINAL_SUMMARY = "temp_data/video_FINAL_SUMMARY.txt"
 FILE_VIDEO_SUBTITLES = "temp_data/temp_video_subtitles.txt"
 FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
+
+DEBUG = True
+
 
 enc = None
 
@@ -34,6 +38,7 @@ def save_file( file_name, content):
         
 # gpt-3.5-turbo-16k
 # gpt-3.5-turbo
+# gpt-4
 def get_completion(prompt, file_name=None, model=config_details['OA_CHAT_GPT_MODEL']):
     print ("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
     messages = [{"role": "user", "content": prompt}]
@@ -80,9 +85,29 @@ def download_transcript(video_id):
         file_name = whisper.download_audio( video_id )
         file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
 
+        ## If something breaks with whisper we need to re-populate array mannualy
+        # file_chunk_names = [ 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_1.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_2.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_3.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_4.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_5.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_6.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_7.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_8.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_9.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_10.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_11.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_12.mp3',
+                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_13.mp3']
+
         translation_txt = ""
         for file in file_chunk_names:
-            translation_txt = translation_txt + whisper.transcribe_audio( file  )
+            file_translation = whisper.transcribe_audio( file  )
+            if DEBUG:
+                with open(FILE_VIDEO_SUBTITLES, "a") as f_out:
+                    f_out.write( file_translation )
+
+            translation_txt = translation_txt + file_translation
 
         return translation_txt, None
 
@@ -131,6 +156,11 @@ def summarize_transcript_in_batches( text ):
         # print_response(prompt, text)
         print ("Batch #{}".format( count ) )
         response = get_completion(prompt)
+
+        if DEBUG:
+             with open(FILE_SUMMARY_BATCHES, "w") as f_out:
+                f_out.write( "- {}\n".format( response ) )
+
         summary_batches.append( "- {}\n".format( response ) )
 
         count = count + 1
@@ -141,13 +171,24 @@ def summarize_transcript_in_batches( text ):
     return ' '.join(summary_batches)
 
 
-def extract_blog_section( text):
+def extract_tldr_section( text ):
+    HEADER = 'Conclusion:\n'
+
+    return __extract_section( text, HEADER )
+
+
+def extract_blog_section( text ):
     HEADER = 'Blog post:\n\'\'\'\nTitle:'
+
+    return __extract_section( text, HEADER )
+
+
+def __extract_section( text, header ):
 
     # first find the beginnig of the blog
     # add title to it too as we have set format
-    start = text.index(HEADER)
-    start = start + len (HEADER)
+    start = text.index(header)
+    start = start + len (header)
     end = text.index( '\n', start)
 
     # get the title
@@ -155,6 +196,7 @@ def extract_blog_section( text):
     # skip the title and find the end of text
     start = start + len(title) + 2 #2 escapes
     end = text.index('\'\'\'', start)
+
     return title, text[start:end]
 
 
@@ -165,21 +207,18 @@ def create_final_summary(text):
     # the following keys: title, long_summary, performance, sentiment, emotions
     prompt = f"""
     You are given multiple summaries one per line starting with a dash for \
-    youtube script for a narrated video that talks about stock market. The narrator \
+    youtube script for a narrated video that talks about stock market. All the summaries are 
+    part of the same narration. The narrator \
     name is Uncle Bruce. The content is delimited with triple backticks. Perform the following:
     1 - Create title out of the main focus in the text.
-    2 - Summarize the text between 100 and 200 words and focusing on any aspects that \
+    2 - Summarize the text focusing on any aspects that \
     are relevant to future potential of any company mentioned and especially Gamestop.
     3 - Extract relevant information to any future company performance.
     4 - What is the general sentiment of the text? Format your answer as a list of \
     lower-case words separated by commas.
-    5 - Identify a list of emotions in the text? Format your answer as a list of \
-    lower-case words separated by commas.
-    6 - Write Key Notes from the summary
-    7 - Write a Step-by-Step Guide from the Notes
-    8 - Write a Blog post from the Notes
-    9 - Create Midjourney prompts from the Notes
-    10 - Create DALLE prompts from the Notes
+    5 - Write Key Notes from the summary
+    6 - Write a Blog post from the Notes
+    7 - Create Midjourney prompts from the Notes
     
     Use the following format:
 
@@ -203,76 +242,62 @@ def create_final_summary(text):
     Step 4 here
     '''
 
-    Emotions:
+    Key Notes:
     '''
     Step 5 here
     '''
 
-    Key Notes:
+    Blog post:
     '''
     Step 6 here
     '''
 
-    Step-by-step guide:
-    '''
-    Step 7 here
-    '''
-
-    Blog post:
-    '''
-    Step 8 here
-    '''
-
     Midjourney prompts:
     '''
-    Step 9 here
-    '''
-
-    DALLE prompts:
-    '''
-    Step 10 here
+    Step 7 here
     '''
 
     Text:
     ```{text}```
     """
 
-    response = get_completion(prompt, file_name=FILE_FINAL_SUMMARY)
-    print ("Done [filename: {}]!".format(FILE_FINAL_SUMMARY) )
+    response = get_completion(prompt)
+    print ('Done!')
 
     return response
 
 
-def main():
-    VIDEO_ID = 'LMdMaOc_D9s'
-    DEBUG = True
-
-    transcript, transcript_raw = download_transcript( VIDEO_ID ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
-    print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
-
-    summary_batches = summarize_transcript_in_batches( transcript )
-    final_summary_txt = create_final_summary( summary_batches )
-
-    with open('{}-{}'.format( VIDEO_ID, FILE_FINAL_SUMMARY ), "w") as f_out:
-            f_out.write( final_summary_txt )
-
-    if DEBUG:
-        with open(FILE_VIDEO_SUBTITLES, "w") as f_out:
-            f_out.write( transcript )
-
-        with open(FILE_SUMMARY_BATCHES, "w") as f_out:
-            f_out.write( summary_batches )
-
+def test_twitter():
     # Twitter testing
-    # final_summary_txt = ""
-    # with open(FILE_FINAL_SUMMARY, 'r') as file:
-    #     final_summary_txt = file.read()
+    final_summary_txt = ""
+    with open('20230928.221655-iU1kRlrEJUI-video_FINAL_SUMMARY.txt', 'r') as file:
+        final_summary_txt = file.read()
 
-    # title, text_blog = extract_blog_section( response )
-    # print( 'Title:{}\n\n{}'.format( title, text_blog ) )
+    text, unnused = extract_tldr_section( final_summary_txt )
+    print( 'TL;DR:\n{}'.format( text ) )
 
     # tw_mgr = TweeterMgr()
     ## tw_mgr.post_tweet( text_blog, title )
+
+
+def main():
+    VIDEO_ID = 'tEM6rFvfW7g'
+
+    # transcript, transcript_raw = download_transcript( VIDEO_ID )
+    # print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
+
+    # summary_batches = summarize_transcript_in_batches( transcript )
+
+    ### PROMPT TESTING
+    summary_batches = load_summary_batches() 
+    final_summary_txt = create_final_summary( summary_batches )
+
+    s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
+    path_parts = FILE_FINAL_SUMMARY.split('/')
+    with open('{}/{}-{}-{}'.format( path_parts[0], s1, VIDEO_ID, path_parts[1] ), "w") as f_out:
+            f_out.write( final_summary_txt )
+
+    # test_twitter()
 
 if __name__ == "__main__":
     if config_details['IGNORE_SSL']:
