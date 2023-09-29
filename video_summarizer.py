@@ -69,7 +69,7 @@ def print_response(prompt, text=None):
     print(response)
 
 
-def download_transcript(video_id="hlNHL5H5FtI"): 
+def download_transcript(video_id): 
     # assigning srt variable with the list
     # of dictionaries obtained by the get_transcript() function
 
@@ -165,8 +165,8 @@ def create_final_summary(text):
     # the following keys: title, long_summary, performance, sentiment, emotions
     prompt = f"""
     You are given multiple summaries one per line starting with a dash for \
-    youtube script for a narrated video that talks about stock market. The content \
-    is delimited with triple backticks
+    youtube script for a narrated video that talks about stock market. The narrator \
+    name is Uncle Bruce. The content is delimited with triple backticks. Perform the following:
     1 - Create title out of the main focus in the text.
     2 - Summarize the text between 100 and 200 words and focusing on any aspects that \
     are relevant to future potential of any company mentioned and especially Gamestop.
@@ -244,34 +244,35 @@ def create_final_summary(text):
 
 
 def main():
+    VIDEO_ID = 'LMdMaOc_D9s'
     DEBUG = True
 
-    # transcript, transcript_raw = download_transcript( '7mv3qMHogrw' ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
+    transcript, transcript_raw = download_transcript( VIDEO_ID ) # 'w4WcTX-PNtU' subtitles not ready 99tkOvP3QAA - short
+    print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
-    # print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
-    # summary_batches = summarize_transcript_in_batches( transcript )
+    summary_batches = summarize_transcript_in_batches( transcript )
+    final_summary_txt = create_final_summary( summary_batches )
 
-    # response = create_final_summary( summary_batches )
+    with open('{}-{}'.format( VIDEO_ID, FILE_FINAL_SUMMARY ), "w") as f_out:
+            f_out.write( final_summary_txt )
 
-    # with open(FILE_FINAL_SUMMARY, "w") as f_out:
-    #         f_out.write( response )
+    if DEBUG:
+        with open(FILE_VIDEO_SUBTITLES, "w") as f_out:
+            f_out.write( transcript )
 
-    # if DEBUG:
-    #     with open(FILE_VIDEO_SUBTITLES, "w") as f_out:
-    #         f_out.write( transcript )
+        with open(FILE_SUMMARY_BATCHES, "w") as f_out:
+            f_out.write( summary_batches )
 
-    #     with open(FILE_SUMMARY_BATCHES, "w") as f_out:
-    #         f_out.write( summary_batches )
+    # Twitter testing
+    # final_summary_txt = ""
+    # with open(FILE_FINAL_SUMMARY, 'r') as file:
+    #     final_summary_txt = file.read()
 
-    response = ""
-    with open(FILE_FINAL_SUMMARY, 'r') as file:
-        response = file.read()
+    # title, text_blog = extract_blog_section( response )
+    # print( 'Title:{}\n\n{}'.format( title, text_blog ) )
 
-    title, text_blog = extract_blog_section( response )
-    print( 'Title:{}\n\n{}'.format( title, text_blog ) )
-
-    tw_mgr = TweeterMgr()
-    # tw_mgr.post_tweet( text_blog, title )
+    # tw_mgr = TweeterMgr()
+    ## tw_mgr.post_tweet( text_blog, title )
 
 if __name__ == "__main__":
     if config_details['IGNORE_SSL']:
