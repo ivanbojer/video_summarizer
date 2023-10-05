@@ -5,6 +5,7 @@ import whisper_mgr as whisper
 import chunk_media as file_chunker
 from tweeter_mgr import TweeterMgr
 import datetime
+import time
 
 import openai
 import json
@@ -16,6 +17,7 @@ FILE_VIDEO_SUBTITLES = "temp_data/temp_video_subtitles.txt"
 FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
 
 DEBUG = True
+SLEEP_SECONDS = 30
 
 
 enc = None
@@ -138,16 +140,18 @@ def summarize_transcript_in_batches( text ):
     script_tokens = text.split(" ")
 
     count = 0
+    start = time.time()
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
         prompt = f"""
-        The text delimited by triple backticks in the context that it \
-        is a youtube script for a narrated video. The narrator name is Uncle Bruce.\
-        The video itself contains daily \
-        updates on the stock market and personal stories. Summarise the text. Extract any updates about any particular stock \
-        or any company mentioned and in particular Gamestop (ticker: GME). Look for \
-        any strategies on how to trade options or mention of the name 'Ryan Cohen'.
+        The text delimited by triple backticks in the context for \
+        a Youtube transcript for a narrated video that talks about stock market. \
+        The narrator name is Uncle Bruce. The transcript itself contains daily \
+        updates on the stock market and Bruce's personal stories. Summarise the text. \
+        Extract any updates about any particular stock or any company mentioned and in \
+        particular Gamestop (ticker: GME). Look for any options strategies on how to \
+        trade options. Extract any information mentioned about 'Ryan Cohen', the CEO of GameStop.
         
         Text:
         ```{text_to_edit}```
@@ -164,7 +168,14 @@ def summarize_transcript_in_batches( text ):
         summary_batches.append( "- {}\n".format( response ) )
 
         count = count + 1
+
+        if count % 3 == 0:
+            print ('Sleep {} seconds'.format( SLEEP_SECONDS ))
+            time.sleep( SLEEP_SECONDS )
         
+        end = time.time()
+        print ('Time elapsed: {}s\n'.format( round(end - start) ))
+        start = end
         # if count > 1:
         #     break
 
@@ -217,8 +228,8 @@ def create_final_summary(text):
     4 - What is the general sentiment of the text? Format your answer as a list of \
     lower-case words separated by commas.
     5 - Write Key Notes from the summary
-    6 - Write a Blog post from the Notes
-    7 - Create Midjourney prompts from the Notes
+    6 - Write a Twitter blog post
+    7 - Create Midjourney prompts for Key Notes
     
     Use the following format:
 
@@ -281,15 +292,17 @@ def test_twitter():
 
 
 def main():
-    VIDEO_ID = 'tEM6rFvfW7g'
+    VIDEO_ID = 'ooOlEd5HxWs'
 
-    # transcript, transcript_raw = download_transcript( VIDEO_ID )
-    # print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
+    transcript, transcript_raw = download_transcript( VIDEO_ID )
+    print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
-    # summary_batches = summarize_transcript_in_batches( transcript )
+    summary_batches = summarize_transcript_in_batches( transcript )
 
-    ### PROMPT TESTING
-    summary_batches = load_summary_batches() 
+    # # ### PROMPT TESTING
+    # summary_batches = load_summary_batches() 
+    ###
+
     final_summary_txt = create_final_summary( summary_batches )
 
     s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
