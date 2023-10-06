@@ -1,6 +1,7 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import TranscriptsDisabled
 import ignoreSSL
+import my_prompt as PROMPT
 import whisper_mgr as whisper
 import chunk_media as file_chunker
 from tweeter_mgr import TweeterMgr
@@ -17,7 +18,7 @@ FILE_VIDEO_SUBTITLES = "temp_data/temp_video_subtitles.txt"
 FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
 
 DEBUG = True
-SLEEP_SECONDS = 30
+SLEEP_SECONDS = 20
 
 
 enc = None
@@ -87,21 +88,6 @@ def download_transcript(video_id):
         file_name = whisper.download_audio( video_id )
         file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
 
-        ## If something breaks with whisper we need to re-populate array mannualy
-        # file_chunk_names = [ 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_1.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_2.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_3.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_4.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_5.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_6.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_7.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_8.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_9.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_10.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_11.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_12.mp3',
-                            # 'STOCKS UP IN PRE MARKET IN OVER SOLD ENVIRONMENT STOCK TRADING IN PLAIN ENGLISH WITH UNCLE BRUCE [tEM6rFvfW7g]_chunk_13.mp3']
-
         translation_txt = ""
         for file in file_chunk_names:
             file_translation = whisper.transcribe_audio( file  )
@@ -144,22 +130,9 @@ def summarize_transcript_in_batches( text ):
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
-        prompt = f"""
-        The text delimited by triple backticks in the context for \
-        a Youtube transcript for a narrated video that talks about stock market. \
-        The narrator name is Uncle Bruce. The transcript itself contains daily \
-        updates on the stock market and Bruce's personal stories. Summarise the text. \
-        Extract any updates about any particular stock or any company mentioned and in \
-        particular Gamestop (ticker: GME). Look for any options strategies on how to \
-        trade options. Extract any information mentioned about 'Ryan Cohen', the CEO of GameStop.
-        
-        Text:
-        ```{text_to_edit}```
-        """
-
         # print_response(prompt, text)
         print ("Batch #{}".format( count ) )
-        response = get_completion(prompt)
+        response = get_completion( PROMPT.BATCH_PROMPT.format( text_to_edit ))
 
         if DEBUG:
              with open(FILE_SUMMARY_BATCHES, "w") as f_out:
@@ -214,65 +187,7 @@ def __extract_section( text, header ):
 def create_final_summary(text):
     print ("Creating final summary...")
 
-    #     7 - Provide same steps as JSON string with \
-    # the following keys: title, long_summary, performance, sentiment, emotions
-    prompt = f"""
-    You are given multiple summaries one per line starting with a dash for \
-    youtube script for a narrated video that talks about stock market. All the summaries are 
-    part of the same narration. The narrator \
-    name is Uncle Bruce. The content is delimited with triple backticks. Perform the following:
-    1 - Create title out of the main focus in the text.
-    2 - Summarize the text focusing on any aspects that \
-    are relevant to future potential of any company mentioned and especially Gamestop.
-    3 - Extract relevant information to any future company performance.
-    4 - What is the general sentiment of the text? Format your answer as a list of \
-    lower-case words separated by commas.
-    5 - Write Key Notes from the summary
-    6 - Write a Twitter blog post
-    7 - Create Midjourney prompts for Key Notes
-    
-    Use the following format:
-
-    Title:
-    '''
-    Step 1 here
-    '''
- 
-    Summary:
-    '''
-    Step 2 here
-    '''
-
-    Performance:
-    '''
-    Step 3 here
-    '''
-
-    Sentiment:
-    '''
-    Step 4 here
-    '''
-
-    Key Notes:
-    '''
-    Step 5 here
-    '''
-
-    Blog post:
-    '''
-    Step 6 here
-    '''
-
-    Midjourney prompts:
-    '''
-    Step 7 here
-    '''
-
-    Text:
-    ```{text}```
-    """
-
-    response = get_completion(prompt)
+    response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
     print ('Done!')
 
     return response
@@ -292,7 +207,7 @@ def test_twitter():
 
 
 def main():
-    VIDEO_ID = 'ooOlEd5HxWs'
+    VIDEO_ID = 'TnyMFI0uoXY'
 
     transcript, transcript_raw = download_transcript( VIDEO_ID )
     print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
