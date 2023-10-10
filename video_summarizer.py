@@ -92,13 +92,11 @@ def download_transcript(video_id, progress=None):
         file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
 
         translation_txt = ""
-        count = 0
-        for file in file_chunk_names:
+        for count,file in enumerate(file_chunk_names):
             file_translation = whisper.transcribe_audio( file  )
             if progress != None:
-                progress(prog, 'Transcribing video segment {} of {}'.format( count, len(file_chunk_names)))
-                prog = prog + 0.01
-                count = count +1
+                progress(prog, 'Transcribing video segment {} of {}'.format( count+1, len(file_chunk_names)))
+                prog = prog + 0.03
             if DEBUG:
                 with open(FILE_VIDEO_SUBTITLES, "a") as f_out:
                     f_out.write( file_translation )
@@ -144,15 +142,15 @@ def summarize_transcript_in_batches( text, progress=None ):
     total_batches = round(len(script_tokens)/batch_size)
 
     count = 0
-    prog = 0.3
+    prog = 0.5
     start = time.time()
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
         # print_response(prompt, text)
-        print ( "Processung batch {} of {}".format( count, total_batches ) )
+        print ( "Processing batch {} of {}".format( count, total_batches ) )
         if progress != None:
-            progress(prog, "Processung batch {} of {}".format( count, total_batches ))
+            progress(prog, "Processing batch {} of {}".format( count, total_batches ))
             prog = prog + 0.03
 
         response = get_completion( PROMPT.BATCH_PROMPT.format( text_to_edit ))
@@ -214,6 +212,9 @@ def create_final_summary(text, progress=None):
 
     response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
     print ('Done!')
+
+    if progress != None:
+        progress(1, 'Done')
 
     return response
 
