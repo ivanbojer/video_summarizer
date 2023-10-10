@@ -18,7 +18,7 @@ FILE_VIDEO_SUBTITLES = "temp_data/temp_video_subtitles.txt"
 FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
 
 DEBUG = True
-SLEEP_SECONDS = 20
+SLEEP_SECONDS = 25
 
 
 enc = None
@@ -77,9 +77,12 @@ def print_response(prompt, text=None):
     print(response)
 
 
-def download_transcript(video_id): 
+def download_transcript(video_id, progress=None): 
     # assigning srt variable with the list
     # of dictionaries obtained by the get_transcript() function
+    prog = 0.1
+    if progress != None:
+        progress(prog, 'Downloading video')
 
     try:
         srt = YouTubeTranscriptApi.get_transcript( video_id )
@@ -89,8 +92,13 @@ def download_transcript(video_id):
         file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
 
         translation_txt = ""
+        count = 0
         for file in file_chunk_names:
             file_translation = whisper.transcribe_audio( file  )
+            if progress != None:
+                progress(prog, 'Transcribing video segment {} of {}'.format( count, len(file_chunk_names)))
+                prog = prog + 0.01
+                count = count +1
             if DEBUG:
                 with open(FILE_VIDEO_SUBTITLES, "a") as f_out:
                     f_out.write( file_translation )
@@ -109,14 +117,22 @@ def download_transcript(video_id):
     return text, text_raw
 
 
-def load_summary_batches():
+def test_load_summary_batches():
     with open(FILE_SUMMARY_BATCHES, 'r') as file:
         text = file.read()
 
     return text
 
 
-def summarize_transcript_in_batches( text ):
+def test_load_final_summary():
+    time.sleep( 2 )
+    with open(FILE_FINAL_SUMMARY, 'r') as file:
+        text = file.read()
+
+    return text
+
+
+def summarize_transcript_in_batches( text, progress=None ):
     summary_batches = []
 
     # Setting batch size and context size
@@ -125,13 +141,20 @@ def summarize_transcript_in_batches( text ):
     # Tokenize the script
     script_tokens = text.split(" ")
 
+    total_batches = round(len(script_tokens)/batch_size)
+
     count = 0
+    prog = 0.3
     start = time.time()
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
         # print_response(prompt, text)
-        print ("Batch #{}".format( count ) )
+        print ( "Processung batch {} of {}".format( count, total_batches ) )
+        if progress != None:
+            progress(prog, "Processung batch {} of {}".format( count, total_batches ))
+            prog = prog + 0.03
+
         response = get_completion( PROMPT.BATCH_PROMPT.format( text_to_edit ))
 
         if DEBUG:
@@ -184,8 +207,10 @@ def __extract_section( text, header ):
     return title, text[start:end]
 
 
-def create_final_summary(text):
+def create_final_summary(text, progress=None):
     print ("Creating final summary...")
+    if progress != None:
+        progress(0.9, 'Creating final summary...')
 
     response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
     print ('Done!')
@@ -206,24 +231,32 @@ def test_twitter():
     ## tw_mgr.post_tweet( text_blog, title )
 
 
-def main():
-    VIDEO_ID = 'TnyMFI0uoXY'
-
-    transcript, transcript_raw = download_transcript( VIDEO_ID )
+def transcribe_video(video_id, json=False, progress=None):
+    transcript, transcript_raw = download_transcript( video_id, progress )
     print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
-    summary_batches = summarize_transcript_in_batches( transcript )
+    summary_batches = summarize_transcript_in_batches( transcript, progress )
 
     # # ### PROMPT TESTING
     # summary_batches = load_summary_batches() 
     ###
 
-    final_summary_txt = create_final_summary( summary_batches )
-
+    final_summary_txt = create_final_summary( summary_batches, progress )
     s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
     path_parts = FILE_FINAL_SUMMARY.split('/')
-    with open('{}/{}-{}-{}'.format( path_parts[0], s1, VIDEO_ID, path_parts[1] ), "w") as f_out:
+    with open('{}/{}-{}-{}'.format( path_parts[0], s1, video_id, path_parts[1] ), "w") as f_out:
             f_out.write( final_summary_txt )
+
+    if not json:
+        return final_summary_txt
+    else:
+        json_str = {"video_id": video_id, "summary":final_summary_txt}
+        return json.loads( json_str )
+
+
+def main():
+    VIDEO_ID = 'TnyMFI0uoXY'
+    summary = transcribe_video(VIDEO_ID)
 
     # test_twitter()
 
