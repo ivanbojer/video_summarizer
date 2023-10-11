@@ -1,10 +1,11 @@
 import gradio as gr
-from app import video_summarizer as vid
 import json
-from app import ignoreSSL
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
 from starlette.requests import Request
+from app import ignoreSSL
+from app import video_summarizer as vid
+from app import logger
 
 # Load config values
 with open(r'config.json') as config_file:
@@ -37,7 +38,7 @@ gradio_app = gr.mount_gradio_app(app, demo.queue(), '/gradio')
 
 def main():
     if config_details['IGNORE_SSL']:
-        print ( "ignore SSL" )
+        logger.logger.info( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
             demo.queue()
     else:

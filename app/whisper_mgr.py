@@ -3,25 +3,15 @@ import yt_dlp as downloader
 import openai
 import json
 from app import ignoreSSL
+from app import logger
 
 file_name = None
-
-class MyLogger(object):
-    def debug(self, msg):
-        pass
-
-    def warning(self, msg):
-        pass
-
-    def error(self, msg):
-        print(msg)
-
 
 def yt_dlp_monitor(d):
     global file_name
     if d['status'] == 'finished':
         file_name = d['filename']
-        print('Done downloading\n{}\n, now converting ...'.format( file_name ))
+        logger.logger.info('Done downloading\n{}\n, now converting ...'.format( file_name ))
 
 with open(r'config.json') as config_file:
     config_details = json.load(config_file)
@@ -30,7 +20,7 @@ MEDIA_FILENAME = 'temp_audio_file.mp3'
 TRANSLATION_FILENAME = 'temp_audio_file_transcript.txt'
 
 def transcribe_audio( file_name = MEDIA_FILENAME ):
-    print('Transcribing file_name: {}'.format( file_name ) )
+    logger.logger.info('Transcribing file_name: {}'.format( file_name ) )
     f_media = open( file_name, 'rb')
 
     response = openai.Audio.transcribe(
@@ -58,7 +48,7 @@ def download_audio( video_id ):
 
 
     with downloader.YoutubeDL(ydl_opts) as ydl:
-        print( "Video URL: https://www.youtube.com/watch?v={}".format( video_id ) )
+        logger.logger.info( "Video URL: https://www.youtube.com/watch?v={}".format( video_id ) )
         ydl.download(["https://www.youtube.com/watch?v={}".format( video_id )])
 
     global file_name

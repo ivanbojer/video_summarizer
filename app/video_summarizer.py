@@ -5,6 +5,7 @@ from app import my_prompt as PROMPT
 from app import whisper_mgr as whisper
 from app import chunk_media as file_chunker
 from app import tweeter_mgr as TweeterMgr
+from app import logger
 import datetime
 import time
 
@@ -74,7 +75,7 @@ def num_tokens_from_string(string: str) -> int:
 
 def print_response(prompt, text=None):
     response = get_completion(prompt)
-    print(response)
+    logger.logger.info(response)
 
 
 def download_transcript(video_id, progress=None): 
@@ -87,7 +88,7 @@ def download_transcript(video_id, progress=None):
     try:
         srt = YouTubeTranscriptApi.get_transcript( video_id )
     except TranscriptsDisabled as e:
-        print( "Transcripts not enabled of not generated. Falling back to whisper...")
+        logger.logger.warning( "Transcripts not enabled of not generated. Falling back to whisper...")
         file_name = whisper.download_audio( video_id )
         file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
 
@@ -226,7 +227,7 @@ def test_twitter():
         final_summary_txt = file.read()
 
     text, unnused = extract_tldr_section( final_summary_txt )
-    print( 'TL;DR:\n{}'.format( text ) )
+    logger.logger.info( 'TL;DR:\n{}'.format( text ) )
 
     # tw_mgr = TweeterMgr()
     ## tw_mgr.post_tweet( text_blog, title )

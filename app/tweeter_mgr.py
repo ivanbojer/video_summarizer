@@ -2,8 +2,8 @@ from requests_oauthlib import OAuth1Session
 import os
 import json
 import webbrowser
-import datetime
 from app import ignoreSSL
+from app import logger
 
 class TweeterMgr():
 
@@ -44,18 +44,18 @@ class TweeterMgr():
             try:
                 fetch_response = oauth.fetch_request_token(request_token_url)
             except ValueError:
-                print(
+                logger.logger.error(
                     "There may have been an issue with the consumer_key or consumer_secret you entered."
                 )
 
             resource_owner_key = fetch_response.get("oauth_token")
             resource_owner_secret = fetch_response.get("oauth_token_secret")
-            print("Got OAuth token: %s" % resource_owner_key)
+            logger.logger.info("Got OAuth token: %s" % resource_owner_key)
 
             # Get authorization
             base_authorization_url = "https://api.twitter.com/oauth/authorize"
             authorization_url = oauth.authorization_url(base_authorization_url)
-            print("Please go here and authorize: %s" % authorization_url)
+            logger.logger.info("Please go here and authorize: %s" % authorization_url)
             webbrowser.open( authorization_url )
             verifier = input("Paste the PIN here: ")
 
@@ -122,12 +122,12 @@ class TweeterMgr():
                     "Request returned an error: {} {}".format(response.status_code, response.text)
                 )
 
-            print("Response code: {}".format(response.status_code))
+            logger.logger.info("Response code: {}".format(response.status_code))
 
             # Saving the response as JSON
             json_response = response.json()
 
-        print( 'Payload:{}'.format( payload['text'] ))
+        logger.logger.info( 'Payload:{}'.format( payload['text'] ))
         return json_response
 
 
@@ -147,8 +147,8 @@ class TweeterMgr():
             end = min(start + max_chunk_chars, len(text)-1)
 
             while text[end] != '.':
-                # print('start:{} end:{} c:{}'.format( start, end, text[end]) )
-                # print(text[start:end])
+                # logger.logger.info('start:{} end:{} c:{}'.format( start, end, text[end]) )
+                # logger.logger.info(text[start:end])
                 end = end -1
 
                 # in case that the whole sentence is greater than
@@ -196,7 +196,7 @@ class TweeterMgr():
                             }
                 }
 
-            print( '{}'.format( payload['text'] ))
+            logger.logger.info( '{}'.format( payload['text'] ))
             
             if not fake_run:
                 json_response = self.__post_tweet( payload )
@@ -222,7 +222,7 @@ class TweeterMgr():
                 "Request returned an error: {} {}".format(response.status_code, response.text)
             )
 
-        print("Response code: {}".format(response.status_code))
+        logger.logger.info("Response code: {}".format(response.status_code))
 
         # Saving the response as JSON
         json_response = response.json()
@@ -254,7 +254,7 @@ class TweeterMgr():
                 "Request returned an error: {} {}".format(response.status_code, response.text)
             )
 
-        print("Response code: {}".format(response.status_code))
+        logger.logger.info("Response code: {}".format(response.status_code))
 
         # Saving the response as JSON
         json_response = response.json()
@@ -286,10 +286,10 @@ class TweeterMgr():
 
         # txt_chunks = self.__split_text_in_chunks(text)
         # for idx,c in enumerate(txt_chunks):
-        #     print('chunk #{}. len:{}'.format( idx, len(c)))
+        #     logger.logger.info('chunk #{}. len:{}'.format( idx, len(c)))
 
         # for idx,c in enumerate(txt_chunks):
-        #     print( c )
+        #     logger.logger.info( c )
 
 if __name__ == "__main__":
     with ignoreSSL.no_ssl_verification():
