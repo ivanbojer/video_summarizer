@@ -124,6 +124,7 @@ def test_load_summary_batches():
 
 
 def test_load_final_summary():
+    logger.logger.info('Loading dummy summary...')
     time.sleep( 2 )
     with open(FILE_FINAL_SUMMARY, 'r') as file:
         text = file.read()
@@ -142,16 +143,16 @@ def summarize_transcript_in_batches( text, progress=None ):
 
     total_batches = round(len(script_tokens)/batch_size)
 
-    count = 0
+    count = 1
     prog = 0.5
     start = time.time()
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
         # print_response(prompt, text)
-        logger.logger.info( "Processing batch {} of {}".format( count, total_batches ) )
+        logger.logger.info( "AI processing batch {} of {}".format( count, total_batches ) )
         if progress != None:
-            progress(prog, "Processing batch {} of {}".format( count, total_batches ))
+            progress(prog, "AI processing batch {} of {}".format( count, total_batches ))
             prog = prog + 0.03
 
         response = get_completion( PROMPT.BATCH_PROMPT.format( text_to_edit ))

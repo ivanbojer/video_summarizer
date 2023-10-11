@@ -8,5 +8,13 @@
 
 
 ## docker build
-- docker build . -t video
+- docker build . -t videosummarizer
 - docker run -p 127.0.0.1:8080:8080 -t video
+
+## gcloud run
+- gcloud config set run/region us-central1
+- gcloud builds submit --tag [IMAGE] . 
+- gcloud run deploy videosummarizer --image [IMAGE]
+
+## artifactory
+- gcloud auth configure-docker us-central1-docker.pkg.dev
