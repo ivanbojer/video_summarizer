@@ -9,7 +9,9 @@ ENV PYTHONUNBUFFERED True
 # Copy local code to the container image.
 WORKDIR /code
 COPY ./requirements.txt /code/requirements.txt
-# Install production dependencies.
+# Install production dependencies 1
+RUN apt-get update && apt-get install -y ffmpeg
+# Install production dependencies 2
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 # RUN pip install -r requirements.txt
 
