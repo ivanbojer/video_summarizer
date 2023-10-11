@@ -61,7 +61,7 @@ def download_audio( video_id ):
 def main():
     file_name = download_audio( '1AbToBYhY20' )
     translation_txt = transcribe_audio( file_name  )
-    print ( translation_txt )
+    logger.logger.info ( translation_txt )
 
     with open(TRANSLATION_FILENAME, 'w') as f_out:
         f_out.write( translation_txt )
@@ -69,7 +69,7 @@ def main():
 
 if __name__ == "__main__":
     if config_details['IGNORE_SSL']:
-        print ( "ignore SSL" )
+        logger.logger.warn ( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
              main()
     else:

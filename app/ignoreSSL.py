@@ -39,7 +39,7 @@ def no_ssl_verification():
 def main():
     with no_ssl_verification():
         object = requests.get("https://www.youtube.com/watch?v=u_QL2QQORZ0&ab_channel=OutofSpecGuide")
-        print (object)
+        print(object)
 
 
 if __name__ == "__main__":

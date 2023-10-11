@@ -13,8 +13,8 @@ with open(r'config.json') as config_file:
 
 def summarize_text(video_id, progress=gr.Progress()):
     progress(float(0.0), desc="Starting...")
-    summary = vid.test_load_final_summary()
-    # summary = vid.transcribe_video(video_id, False, progress)
+    # summary = vid.test_load_final_summary()
+    summary = vid.transcribe_video(video_id, False, progress)
     return summary 
 
 with gr.Blocks() as demo:

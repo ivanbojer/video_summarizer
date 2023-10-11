@@ -44,7 +44,7 @@ def save_file( file_name, content):
 # gpt-3.5-turbo
 # gpt-4
 def get_completion(prompt, file_name=None, model=config_details['OA_CHAT_GPT_MODEL']):
-    print ("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
+    logger.logger.info("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(
         model=model,
@@ -149,7 +149,7 @@ def summarize_transcript_in_batches( text, progress=None ):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
         # print_response(prompt, text)
-        print ( "Processing batch {} of {}".format( count, total_batches ) )
+        logger.logger.info( "Processing batch {} of {}".format( count, total_batches ) )
         if progress != None:
             progress(prog, "Processing batch {} of {}".format( count, total_batches ))
             prog = prog + 0.03
@@ -165,11 +165,11 @@ def summarize_transcript_in_batches( text, progress=None ):
         count = count + 1
 
         if count % 3 == 0:
-            print ('Sleep {} seconds'.format( SLEEP_SECONDS ))
+            logger.logger.info('Sleep {} seconds'.format( SLEEP_SECONDS ))
             time.sleep( SLEEP_SECONDS )
         
         end = time.time()
-        print ('Time elapsed: {}s\n'.format( round(end - start) ))
+        logger.logger.info('Time elapsed: {}s\n'.format( round(end - start) ))
         start = end
         # if count > 1:
         #     break
@@ -207,12 +207,12 @@ def __extract_section( text, header ):
 
 
 def create_final_summary(text, progress=None):
-    print ("Creating final summary...")
+    logger.logger.info("Creating final summary...")
     if progress != None:
         progress(0.9, 'Creating final summary...')
 
     response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
-    print ('Done!')
+    logger.logger.info('Done!')
 
     if progress != None:
         progress(1, 'Done')
@@ -235,7 +235,7 @@ def test_twitter():
 
 def transcribe_video(video_id, json=False, progress=None):
     transcript, transcript_raw = download_transcript( video_id, progress )
-    print ("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
+    logger.logger.info("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
     summary_batches = summarize_transcript_in_batches( transcript, progress )
 
@@ -264,7 +264,7 @@ def main():
 
 if __name__ == "__main__":
     if config_details['IGNORE_SSL']:
-        print ( "ignore SSL" )
+        logger.logger.warn( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
             main()
     else:
