@@ -1,9 +1,10 @@
 import gradio as gr
-import video_summarizer as vid
+from app import video_summarizer as vid
 import json
-import datetime as dt
-import time
-import ignoreSSL
+from app import ignoreSSL
+from fastapi import FastAPI
+from starlette.responses import RedirectResponse
+from starlette.requests import Request
 
 # Load config values
 with open(r'config.json') as config_file:
@@ -11,8 +12,8 @@ with open(r'config.json') as config_file:
 
 def summarize_text(video_id, progress=gr.Progress()):
     progress(float(0.0), desc="Starting...")
-    # summary = vid.test_load_final_summary()
-    summary = vid.transcribe_video(video_id, False, progress)
+    summary = vid.test_load_final_summary()
+    # summary = vid.transcribe_video(video_id, False, progress)
     return summary 
 
 with gr.Blocks() as demo:
@@ -23,15 +24,26 @@ with gr.Blocks() as demo:
         with gr.Box():
             out = gr.TextArea(label="Summary output:")
         
-
         btn.click(fn=summarize_text, inputs=inp, outputs=out)
-    
 
-if __name__ == "__main__":
+
+app = FastAPI()
+
+@app.get('/')
+async def homepage(request: Request):
+    return RedirectResponse(url='/gradio')
+
+gradio_app = gr.mount_gradio_app(app, demo.queue(), '/gradio')
+
+def main():
     if config_details['IGNORE_SSL']:
         print ( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
-            demo.queue().launch(share=False)
+            demo.queue()
     else:
-        demo.queue().launch(share=False)
+        demo.queue().launch()
+
+
+if __name__ == "__main__":
+    main()
     

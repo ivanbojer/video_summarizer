@@ -1,10 +1,10 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import TranscriptsDisabled
-import ignoreSSL
-import my_prompt as PROMPT
-import whisper_mgr as whisper
-import chunk_media as file_chunker
-from tweeter_mgr import TweeterMgr
+from app import ignoreSSL
+from app import my_prompt as PROMPT
+from app import whisper_mgr as whisper
+from app import chunk_media as file_chunker
+from app import tweeter_mgr as TweeterMgr
 import datetime
 import time
 

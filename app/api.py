@@ -6,7 +6,7 @@ import gradio as gr
 import time
 import random
 
-import video_summarizer as vid
+from app import video_summarizer as vid
  
 app = FastAPI()
 count = 0

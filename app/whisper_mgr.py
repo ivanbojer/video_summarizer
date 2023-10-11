@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import yt_dlp as downloader
 import openai
 import json
-import ignoreSSL
+from app import ignoreSSL
 
 file_name = None
 

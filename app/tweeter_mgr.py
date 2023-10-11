@@ -3,7 +3,7 @@ import os
 import json
 import webbrowser
 import datetime
-import ignoreSSL
+from app import ignoreSSL
 
 class TweeterMgr():
 
