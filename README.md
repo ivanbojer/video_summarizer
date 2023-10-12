@@ -15,6 +15,8 @@
 - gcloud config set run/region us-central1
 - gcloud builds submit --tag [IMAGE] . 
 - gcloud run deploy videosummarizer --image [IMAGE]
+-
+- gcloud run deploy videosummarizer --source .
 
 ## artifactory
 - gcloud auth configure-docker us-central1-docker.pkg.dev
