@@ -133,6 +133,11 @@ def test_load_final_summary():
 
 
 def summarize_transcript_in_batches( text, progress=None ):
+    #clean up the file
+    if DEBUG:
+            with open(FILE_SUMMARY_BATCHES, 'w') as f_out:
+                f_out.write( 'Date: {}\n\n'.format( datetime.datetime.now() ) )
+
     summary_batches = []
 
     # Setting batch size and context size
@@ -143,22 +148,22 @@ def summarize_transcript_in_batches( text, progress=None ):
 
     total_batches = round(len(script_tokens)/batch_size)
 
-    count = 1
+    count = 0
     prog = 0.5
     start = time.time()
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
         # print_response(prompt, text)
-        logger.logger.info( "AI processing batch {} of {}".format( count, total_batches ) )
+        logger.logger.info( "AI processing batch {} of {}".format( count+1, total_batches ) )
         if progress != None:
-            progress(prog, "AI processing batch {} of {}".format( count, total_batches ))
+            progress(prog, "AI processing batch {} of {}".format( count+1, total_batches ))
             prog = prog + 0.03
 
         response = get_completion( PROMPT.BATCH_PROMPT.format( text_to_edit ))
 
         if DEBUG:
-             with open(FILE_SUMMARY_BATCHES, "w") as f_out:
+             with open(FILE_SUMMARY_BATCHES, "a") as f_out:
                 f_out.write( "- {}\n".format( response ) )
 
         summary_batches.append( "- {}\n".format( response ) )
@@ -175,7 +180,7 @@ def summarize_transcript_in_batches( text, progress=None ):
         # if count > 1:
         #     break
 
-    return ' '.join(summary_batches)
+    return ''.join(summary_batches)
 
 
 def extract_tldr_section( text ):
@@ -207,12 +212,15 @@ def __extract_section( text, header ):
     return title, text[start:end]
 
 
-def create_final_summary(text, progress=None):
+def create_final_summary(text, progress=None, prompt=None):
     logger.logger.info("Creating final summary...")
     if progress != None:
         progress(0.9, 'Creating final summary...')
 
-    response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
+    if prompt != None:
+        response = get_completion( prompt.format(text) )
+    else:
+        response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
     logger.logger.info('Done!')
 
     if progress != None:
@@ -234,7 +242,7 @@ def test_twitter():
     ## tw_mgr.post_tweet( text_blog, title )
 
 
-def transcribe_video(video_id, json=False, progress=None):
+def transcribe_video(video_id, json=False, progress=None, prompt=None):
     transcript, transcript_raw = download_transcript( video_id, progress )
     logger.logger.info("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
@@ -244,7 +252,7 @@ def transcribe_video(video_id, json=False, progress=None):
     # summary_batches = load_summary_batches() 
     ###
 
-    final_summary_txt = create_final_summary( summary_batches, progress )
+    final_summary_txt = create_final_summary( summary_batches, progress, prompt )
     s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
     path_parts = FILE_FINAL_SUMMARY.split('/')
     with open('{}/{}-{}-{}'.format( path_parts[0], s1, video_id, path_parts[1] ), "w") as f_out:

@@ -12,6 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import ignoreSSL
 from app import video_summarizer as vid
 from app import logger
+from app import my_prompt
 
 OBFUSCATED_MNT_POINT = secrets.token_urlsafe(30)
 
@@ -41,19 +42,20 @@ oauth.register(
 
 def summarize_text(video_id, progress=gr.Progress()):
     progress(float(0.0), desc="Starting...")
-    summary = vid.test_load_final_summary()
-    # summary = vid.transcribe_video(video_id, False, progress)
+    # summary = vid.test_load_final_summary()
+    summary = vid.transcribe_video(video_id, False, progress)
     return gr.Button(interactive=False), summary 
 
 with gr.Blocks() as demo:
     with gr.Column():
         with gr.Group():
             inp = gr.Text(label="Video id:")
+            prompt = gr.TextArea(label="Prompt:", value=my_prompt.FINAL_PROMPT)
             btn = gr.Button("Transcribe")
         with gr.Box():
             out = gr.TextArea(label="Summary output:")
         
-        btn.click(fn=summarize_text, inputs=inp, outputs=[btn,out])
+        btn.click(fn=summarize_text, inputs=inp, outputs=[btn, out])
 
 
 app = FastAPI()
