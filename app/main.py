@@ -2,6 +2,7 @@ import gradio as gr
 import json
 import secrets
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from starlette.responses import RedirectResponse, HTMLResponse
 from starlette.requests import Request
 from starlette.config import Config
@@ -63,10 +64,30 @@ if SECRET_KEY is None:
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 
+def is_authorized( user_email ):
+    return user_email in ['ivan@bojerco.com'] 
+    
+
 @app.route('/login')
 async def login(request: Request):
     redirect_uri = request.url_for('auth')  # This creates the url for the /auth endpoint
     return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.route('/logout')
+async def logout(request: Request):
+    request.session.pop('user', None)
+    return RedirectResponse(url='/')
+
+
+@app.route('/support_access')
+async def get_support_bundle(request: Request):
+    user = request.session.get('user')
+
+    if user and is_authorized(user['email']):
+        return FileResponse('file.log')
+    else:
+        return RedirectResponse(url='logout')
 
 
 @app.route('/auth')
@@ -75,10 +96,15 @@ async def auth(request: Request):
         access_token = await oauth.google.authorize_access_token(request)
     except OAuthError:
         return RedirectResponse(url='/')
-    # user_data = await oauth.google.parse_id_token(request, access_token)
-    # request.session['user'] = dict(user_data)
-    request.session['user'] = access_token.get('userinfo')
-    return RedirectResponse(url='/')
+
+    user = access_token.get('userinfo')
+
+    if is_authorized(user['email']):
+        request.session['user'] = user
+        return RedirectResponse(url='/')
+    
+    logger.logger.warn('Detected unauthorized access by {}'.format( user ))
+    return RedirectResponse(url='logout')
 
 
 @app.get('/')
@@ -89,14 +115,10 @@ async def public(request: Request):
         email = user.get('email')
         logger.logger.info('Logged in user: {} [{}]'.format(name, email))
         return RedirectResponse(url='/{}'.format( OBFUSCATED_MNT_POINT ))
+    
     return HTMLResponse('<a href=/login>Login</a>')
 
     # return RedirectResponse(url='/gradio')
-
-@app.route('/logout')
-async def logout(request: Request):
-    request.session.pop('user', None)
-    return RedirectResponse(url='/')
 
 gradio_app = gr.mount_gradio_app(app, demo.queue(), '/{}'.format( OBFUSCATED_MNT_POINT) )
     
