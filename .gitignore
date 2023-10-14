@@ -159,7 +159,7 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-config.json
+#config.json
 subtitles_raw.txt
 .gitignore
 subtitles.txt
@@ -171,3 +171,4 @@ config-tweeter.json
 HEALING_MUSIC_DOWNLOAD.txt
 *video_FINAL_SUMMARY.txt
 *.mp3
+client_secret.json
