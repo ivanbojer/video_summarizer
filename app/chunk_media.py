@@ -1,7 +1,7 @@
 from pydub import AudioSegment
 from app import logger
 
-def chunk_audio_file(audio_file_path, chunk_size_in_minutes=10):
+def chunk_audio_file(audio_file_path, progress=None, chunk_size_in_minutes=10):
     audio_extension = audio_file_path.split('.')[-1]
     audio_file = AudioSegment.from_mp3( audio_file_path )
     output_prefix = '{}_chunk_'.format( audio_file_path.split('.')[0] )
@@ -18,6 +18,7 @@ def chunk_audio_file(audio_file_path, chunk_size_in_minutes=10):
 
     chunk_unit = segment_size
     chunked_file_names = []
+    prog = 0.1
     for indx, audio_segment in enumerate(range(0, total_duration_ms, chunk_unit)):
         start = audio_segment
         end = min(audio_segment+chunk_unit, total_duration_ms)
@@ -25,6 +26,9 @@ def chunk_audio_file(audio_file_path, chunk_size_in_minutes=10):
         chunk_file_name = output_prefix + str(indx+1) + '.' + audio_extension
         chunked_file_names.append( chunk_file_name )
         logger.logger.info('indx:{}, from[ms]:{} to[ms]:{}'.format( indx, start, end))
+        if progress != None:
+            progress(prog, 'indx:{}, from[ms]:{} to[ms]:{}'.format( indx, start, end))
+            prog = prog + 0.03
         audio_file[start:end].export(chunk_file_name, format=audio_extension)
 
     return chunked_file_names

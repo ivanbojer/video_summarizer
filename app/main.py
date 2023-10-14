@@ -1,6 +1,7 @@
 import gradio as gr
 import json
 import secrets
+import os
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from starlette.responses import RedirectResponse, HTMLResponse
@@ -18,16 +19,15 @@ OBFUSCATED_MNT_POINT = secrets.token_urlsafe(30)
 
 # Load config values
 with open(r'config.json') as config_file:
-    config_details = json.load(config_file)
+    config_details2 = json.load(config_file)
 
-# Load secret values
-with open(r'client_secret.json') as secret_file:
-    secret_details = json.load(secret_file)
 
-GOOGLE_CLIENT_ID = secret_details['web']['client_id'] or None
-GOOGLE_CLIENT_SECRET = secret_details['web']['client_secret'] or None
-if GOOGLE_CLIENT_ID is None or GOOGLE_CLIENT_SECRET is None:
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID') or None
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET') or None
+SECRET_KEY = os.getenv('SECRET_KEY') or None
+if GOOGLE_CLIENT_ID is None or GOOGLE_CLIENT_SECRET is None or SECRET_KEY is None:
     raise BaseException('Missing sec configuration')
+
 
 # Set up oauth
 config_data = {'GOOGLE_CLIENT_ID': GOOGLE_CLIENT_ID, 'GOOGLE_CLIENT_SECRET': GOOGLE_CLIENT_SECRET}
@@ -40,46 +40,67 @@ oauth.register(
 )
 
 
-def summarize_text(video_id, progress=gr.Progress()):
+def summarize_text(video_id, batch_prompt, final_prompt, progress=gr.Progress()):
     progress(float(0.0), desc="Starting...")
     # summary = vid.test_load_final_summary()
-    summary = vid.transcribe_video(video_id, False, progress)
+
+    summary = vid.transcribe_video(video_id=video_id, batch_prompt=batch_prompt, final_prompt=final_prompt, progress=progress)
     return gr.Button(interactive=False), summary 
 
+
 with gr.Blocks() as demo:
-    with gr.Column():
-        with gr.Group():
-            inp = gr.Text(label="Video id:")
-            prompt = gr.TextArea(label="Prompt:", value=my_prompt.FINAL_PROMPT)
-            btn = gr.Button("Transcribe")
-        with gr.Box():
-            out = gr.TextArea(label="Summary output:")
-        
-        btn.click(fn=summarize_text, inputs=inp, outputs=[btn, out])
+    with gr.Box():
+        with gr.Row():
+            with gr.Group():
+                video_id = gr.Text(label="Video id:")
+                batch_prompt = gr.Textbox(label="Batch prompt:", value=my_prompt.BATCH_PROMPT_CUSTOM_UNCLE_BRUCE)
+                final_prompt = gr.Textbox(label="Final prompt:", value=my_prompt.FINAL_PROMPT_CUSTOM_UNCLE_BRUCE)
+                btn = gr.Button("Transcribe")
+            with gr.Group():
+                out = gr.TextArea(label="Summary output:", lines=34)
+            
+            btn.click(fn=summarize_text, inputs=[video_id, batch_prompt, final_prompt], outputs=[btn, out])
 
 
 app = FastAPI()
 
-SECRET_KEY = config_details['SECRET_KEY'] or None
-if SECRET_KEY is None:
-    raise 'Missing SECRET_KEY'
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
-
 
 def is_authorized( user_email ):
     return user_email in ['ivan@bojerco.com'] 
+
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    '''The middleware that enforces authentication on our gradio app'''
     
+    # Skip check for obvious mounts (like '/login')
+    if request.url.path.startswith( ('/login', '/auth', '/logout') ):
+        logger.logger.debug('In URL Path: {}'.format( request.url.path ))
+        return await call_next(request)
+
+    user = request.session.get("user")
+    access_token = request.session.get("access_token")
+    refresh_token = request.session.get("refresh_token")
+
+    if not user or not access_token or not refresh_token:
+        logger.logger.warn('User is not authenticated, redirecting to login page')
+        return RedirectResponse(url='/login')
+    
+    return await call_next(request)
 
 @app.route('/login')
 async def login(request: Request):
     redirect_uri = request.url_for('auth')  # This creates the url for the /auth endpoint
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    return await oauth.google.authorize_redirect(request, redirect_uri, access_type='offline', prompt='consent')
 
 
 @app.route('/logout')
 async def logout(request: Request):
     request.session.pop('user', None)
-    return RedirectResponse(url='/')
+    request.session.pop('access_token', None)
+    request.session.pop('refresh_token', None)
+    # return {"message": "You have been logged out."}
+    return HTMLResponse('<p>You have been logged out.</p><a href=/login>Login again</a>')
 
 
 @app.route('/support_access')
@@ -95,14 +116,16 @@ async def get_support_bundle(request: Request):
 @app.route('/auth')
 async def auth(request: Request):
     try:
-        access_token = await oauth.google.authorize_access_token(request)
+        token = await oauth.google.authorize_access_token(request)
     except OAuthError:
         return RedirectResponse(url='/')
 
-    user = access_token.get('userinfo')
+    user = token.get('userinfo')
 
     if is_authorized(user['email']):
         request.session['user'] = user
+        request.session['access_token'] = token['access_token']
+        request.session['refresh_token'] = token['refresh_token']
         return RedirectResponse(url='/')
     
     logger.logger.warn('Detected unauthorized access by {}'.format( user ))
@@ -120,7 +143,7 @@ async def public(request: Request):
     
     return HTMLResponse('<a href=/login>Login</a>')
 
-    # return RedirectResponse(url='/gradio')
 
 gradio_app = gr.mount_gradio_app(app, demo.queue(), '/{}'.format( OBFUSCATED_MNT_POINT) )
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
     
