@@ -15,7 +15,7 @@ class TweeterMgr():
     FOOTER = " #GME #Gamestop #Superstonk"
     HEADER = " Uncle Bruce's Wisdom"
     TW_THREAD_COUNT_CHARS = len('xx/xx ')
-    config_details = None
+    config_details2 = None
     
     def __init__(self, max_tweeet_size_characters=MAX_TWEET_SIZE_CHARACTERS,
                        footer = FOOTER,
@@ -28,13 +28,13 @@ class TweeterMgr():
 
         # Load config values
         with open(r'config.json') as config_file:
-            self.config_details = json.load(config_file)
+            self.config_details2 = json.load(config_file)
 
         self.__authenticate()
 
     def __authenticate(self):
-        consumer_key = self.config_details['TW_CONSUMER_KEY'] #os.environ.get("CONSUMER_KEY")
-        consumer_secret = self.config_details['TW_CONSUMER_SECRET'] #os.environ.get("CONSUMER_SECRET")
+        consumer_key = os.getenv('TW_CONSUMER_KEY') #os.environ.get("CONSUMER_KEY")
+        consumer_secret = os.getenv('TW_CONSUMER_SECRET') #os.environ.get("CONSUMER_SECRET")
 
         if not os.path.exists('token.json'):
             # Get request token

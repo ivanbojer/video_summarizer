@@ -2,19 +2,25 @@ from __future__ import unicode_literals
 import yt_dlp as downloader
 import openai
 import json
+import os
 from app import ignoreSSL
 from app import logger
 
 file_name = None
+AI_API_KEY = os.getenv('AI_API_KEY') or None
 
+if AI_API_KEY is None:
+    raise BaseException('Missing sec configuration (video_summarizer)')
+
+with open(r'config.json') as config_file:
+    config_details2 = json.load(config_file)
+    
 def yt_dlp_monitor(d):
     global file_name
     if d['status'] == 'finished':
         file_name = d['filename']
         logger.logger.info('Done downloading\n{}\n, now converting ...'.format( file_name ))
 
-with open(r'config.json') as config_file:
-    config_details = json.load(config_file)
 
 MEDIA_FILENAME = 'temp_audio_file.mp3'
 TRANSLATION_FILENAME = 'temp_audio_file_transcript.txt'
@@ -24,8 +30,8 @@ def transcribe_audio( file_name = MEDIA_FILENAME ):
     f_media = open( file_name, 'rb')
 
     response = openai.Audio.transcribe(
-        api_key = config_details['OA_OPENAI_API_KEY'],
-        model = config_details['OA_AUDIO_MODEL'],
+        api_key = AI_API_KEY,
+        model = config_details2['OA_AUDIO_MODEL'],
         file = f_media,
         response_format = 'text' # text, json, srt, vtt
     )
@@ -68,7 +74,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if config_details['IGNORE_SSL']:
+    if config_details2['IGNORE_SSL']:
         logger.logger.warn ( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
              main()

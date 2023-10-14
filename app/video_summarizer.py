@@ -8,6 +8,7 @@ from app import tweeter_mgr as TweeterMgr
 from app import logger
 import datetime
 import time
+import os
 
 import openai
 import json
@@ -26,24 +27,22 @@ enc = None
 
 # Load config values
 with open(r'config.json') as config_file:
-    config_details = json.load(config_file)
+    config_details2 = json.load(config_file)
 # //os.getenv("OPENAI_API_KEY")
-openai.api_key = config_details['OA_OPENAI_API_KEY']
-# openai.api_base = config_details['MS_OPENAI_API_BASE']
-# openai.api_version = config_details['MS_OPENAI_API_VERSION']
-# openai.api_type = config_details['MS_OPENAI_API_TYPE']
+AI_API_KEY = os.getenv('AI_API_KEY') or None
 
+if AI_API_KEY is None:
+    raise BaseException('Missing sec configuration (video_summarizer)')
+
+openai.api_key = AI_API_KEY
 
 def save_file( file_name, content):
     if file_name:
         with open(file_name, "w") as f_out:
             f_out.write( content )
 
-        
-# gpt-3.5-turbo-16k
-# gpt-3.5-turbo
-# gpt-4
-def get_completion(prompt, file_name=None, model=config_details['OA_CHAT_GPT_MODEL']):
+
+def get_completion(prompt, file_name=None, model=config_details2['OA_CHAT_GPT_MODEL']):
     logger.logger.info("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
     messages = [{"role": "user", "content": prompt}]
     response = openai.ChatCompletion.create(
@@ -65,7 +64,7 @@ def num_tokens_from_string(string: str) -> int:
     global enc
 
     if not enc:
-        enc = tiktoken.encoding_for_model( config_details['OA_CHAT_GPT_MODEL'] )
+        enc = tiktoken.encoding_for_model( config_details2['OA_CHAT_GPT_MODEL'] )
 
     """Returns the number of tokens in a text string."""
     num_tokens = len(enc.encode(string))
@@ -81,7 +80,7 @@ def print_response(prompt, text=None):
 def download_transcript(video_id, progress=None): 
     # assigning srt variable with the list
     # of dictionaries obtained by the get_transcript() function
-    prog = 0.1
+    prog = 0.2
     if progress != None:
         progress(prog, 'Downloading video')
 
@@ -90,7 +89,7 @@ def download_transcript(video_id, progress=None):
     except TranscriptsDisabled as e:
         logger.logger.warning( "Transcripts not enabled of not generated. Falling back to whisper...")
         file_name = whisper.download_audio( video_id )
-        file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name )
+        file_chunk_names = file_chunker.chunk_audio_file( audio_file_path=file_name, progress=progress )
 
         translation_txt = ""
         for count,file in enumerate(file_chunk_names):
@@ -132,8 +131,7 @@ def test_load_final_summary():
     return text
 
 
-def summarize_transcript_in_batches( text, progress=None ):
-    #clean up the file
+def summarize_transcript_in_batches( text, batch_promp, progress=None ):
     if DEBUG:
             with open(FILE_SUMMARY_BATCHES, 'w') as f_out:
                 f_out.write( 'Date: {}\n\n'.format( datetime.datetime.now() ) )
@@ -151,6 +149,8 @@ def summarize_transcript_in_batches( text, progress=None ):
     count = 0
     prog = 0.5
     start = time.time()
+    cummulative_time = 0
+    average_processing_time = 0
     for i in range(0, len(script_tokens), batch_size):
         text_to_edit = " ".join(script_tokens[i:i+batch_size])
 
@@ -160,39 +160,28 @@ def summarize_transcript_in_batches( text, progress=None ):
             progress(prog, "AI processing batch {} of {}".format( count+1, total_batches ))
             prog = prog + 0.03
 
-        response = get_completion( PROMPT.BATCH_PROMPT.format( text_to_edit ))
+        response = get_completion( '{}\n---\n{}'.format( batch_promp, text_to_edit ))
 
         if DEBUG:
              with open(FILE_SUMMARY_BATCHES, "a") as f_out:
                 f_out.write( "- {}\n".format( response ) )
 
         summary_batches.append( "- {}\n".format( response ) )
-
+        
+        end = time.time()
+        time_elapsed = round(end - start)
+        average_processing_time = ( average_processing_time+time_elapsed) / 2.0
+        cummulative_time = cummulative_time + time_elapsed
+        logger.logger.info('Time elapsed --> single_batch {}s average {}s cumulative {}s'.format( time_elapsed,average_processing_time,cummulative_time ))
+        
         count = count + 1
-
         if count % 3 == 0:
             logger.logger.info('Sleep {} seconds'.format( SLEEP_SECONDS ))
             time.sleep( SLEEP_SECONDS )
-        
-        end = time.time()
-        logger.logger.info('Time elapsed: {}s\n'.format( round(end - start) ))
+
         start = end
-        # if count > 1:
-        #     break
 
     return ''.join(summary_batches)
-
-
-def extract_tldr_section( text ):
-    HEADER = 'Conclusion:\n'
-
-    return __extract_section( text, HEADER )
-
-
-def extract_blog_section( text ):
-    HEADER = 'Blog post:\n\'\'\'\nTitle:'
-
-    return __extract_section( text, HEADER )
 
 
 def __extract_section( text, header ):
@@ -212,15 +201,12 @@ def __extract_section( text, header ):
     return title, text[start:end]
 
 
-def create_final_summary(text, progress=None, prompt=None):
+def create_final_summary(text, final_prompt, progress=None):
     logger.logger.info("Creating final summary...")
     if progress != None:
         progress(0.9, 'Creating final summary...')
 
-    if prompt != None:
-        response = get_completion( prompt.format(text) )
-    else:
-        response = get_completion( PROMPT.FINAL_PROMPT.format(text) )
+    response = get_completion( '{}\n---\n{}'.format( final_prompt, text ) )
     logger.logger.info('Done!')
 
     if progress != None:
@@ -229,34 +215,49 @@ def create_final_summary(text, progress=None, prompt=None):
     return response
 
 
-def test_twitter():
-    # Twitter testing
-    final_summary_txt = ""
-    with open('20230928.221655-iU1kRlrEJUI-video_FINAL_SUMMARY.txt', 'r') as file:
-        final_summary_txt = file.read()
+# def test_twitter():
+#     # Twitter testing
+#     final_summary_txt = ""
+#     with open('20230928.221655-iU1kRlrEJUI-video_FINAL_SUMMARY.txt', 'r') as file:
+#         final_summary_txt = file.read()
 
-    text, unnused = extract_tldr_section( final_summary_txt )
-    logger.logger.info( 'TL;DR:\n{}'.format( text ) )
+#     text, unnused = extract_tldr_section( final_summary_txt )
+#     logger.logger.info( 'TL;DR:\n{}'.format( text ) )
 
-    # tw_mgr = TweeterMgr()
-    ## tw_mgr.post_tweet( text_blog, title )
+#     # tw_mgr = TweeterMgr()
+#     ## tw_mgr.post_tweet( text_blog, title )
 
 
-def transcribe_video(video_id, json=False, progress=None, prompt=None):
+def clean_up_temp_files():
+    logger.logger.info('Removing temp .mp3 files...')
+    try:
+        path = './'
+        files = os.listdir(path)
+        
+        for f in files:
+            if f.endswith('.mp3'):
+                os.remove( os.path.join(path, f) )
+    except Exception as e:
+        logger.logger.warning('No mp3 files: {}'.format( e ))
+
+def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=None):
     transcript, transcript_raw = download_transcript( video_id, progress )
     logger.logger.info("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
-    summary_batches = summarize_transcript_in_batches( transcript, progress )
+    summary_batches = summarize_transcript_in_batches( text=transcript, batch_promp=batch_prompt, progress=progress )
 
     # # ### PROMPT TESTING
     # summary_batches = load_summary_batches() 
     ###
 
-    final_summary_txt = create_final_summary( summary_batches, progress, prompt )
+    final_summary_txt = create_final_summary( text=summary_batches, final_prompt=final_prompt, progress=progress )
     s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
     path_parts = FILE_FINAL_SUMMARY.split('/')
     with open('{}/{}-{}-{}'.format( path_parts[0], s1, video_id, path_parts[1] ), "w") as f_out:
             f_out.write( final_summary_txt )
+
+    #clean up the file
+    clean_up_temp_files()
 
     if not json:
         return final_summary_txt
@@ -272,7 +273,7 @@ def main():
     # test_twitter()
 
 if __name__ == "__main__":
-    if config_details['IGNORE_SSL']:
+    if config_details2['IGNORE_SSL']:
         logger.logger.warn( "ignore SSL" )
         with ignoreSSL.no_ssl_verification():
             main()

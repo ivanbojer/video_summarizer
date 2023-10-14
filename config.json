@@ -1,0 +1,6 @@
+{
+    "OA_CHAT_GPT_MODEL":"gpt-4",
+    "OA_AUDIO_MODEL": "whisper-1",
+    "IGNORE_SSL": 0
+}
+
