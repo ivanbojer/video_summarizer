@@ -53,8 +53,8 @@ with gr.Blocks() as demo:
         with gr.Row():
             with gr.Group():
                 video_id = gr.Text(label="Video id:")
-                batch_prompt = gr.Textbox(label="Batch prompt:", value=my_prompt.BATCH_PROMPT_CUSTOM_UNCLE_BRUCE)
-                final_prompt = gr.Textbox(label="Final prompt:", value=my_prompt.FINAL_PROMPT_CUSTOM_UNCLE_BRUCE)
+                batch_prompt = gr.Textbox(label="Batch prompt:", value=my_prompt.SYSTEM_PROMPT_BATCHES)
+                final_prompt = gr.Textbox(label="Final prompt:", value=my_prompt.SYSTEM_PROMPT_FINAL)
                 btn = gr.Button("Transcribe")
             with gr.Group():
                 out = gr.TextArea(label="Summary output:", lines=34)

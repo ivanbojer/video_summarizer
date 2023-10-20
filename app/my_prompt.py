@@ -8,14 +8,14 @@ SYSTEM_PROMPT_FINAL = """You are stock analyst. You will be provided with a numb
 5 - Write Key Notes from the summary.
 6 - Write a Twitter blog post from the summary."""
 
-BATCH_PROMPT_CUSTOM_UNCLE_BRUCE = """You are the stock analyst. I will give you a YouTube video transcript, a text delimited by triple backticks.\
+BATCH_PROMPT_CUSTOM_UNCLE_BRUCE_OLD = """You are the stock analyst. I will give you a YouTube video transcript, a text delimited by triple backticks.\
 The transcript contains daily updates on the stock market, advice on option \
 trading strategies, and personal life stories. Summarize the text delimited by triple quotes focusing on stocks."""
 
 
 # 7 - Provide same steps as JSON string with \
 # the following keys: title, long_summary, performance, sentiment, emotions
-FINAL_PROMPT_CUSTOM_UNCLE_BRUCE = """You are the stock analyst. I will give you a YouTube video transcript on multiple lines \
+FINAL_PROMPT_CUSTOM_UNCLE_BRUCE_OLD = """You are the stock analyst. I will give you a YouTube video transcript on multiple lines \
 starting with a dash. All the summaries are part of the same content. The narrator's name \
 is Bruce. The transcript contains daily updates on the stock market, advice on option \
 trading strategies, and Bruce's personal stories. Focus on any updates \

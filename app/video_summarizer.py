@@ -182,12 +182,12 @@ def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=
     ###
 
     final_summary_txt = get_final_summary(summary_batches=summary_batches, 
-                                          prompt=PROMPT.SYSTEM_PROMPT_FINAL, 
+                                          prompt=final_prompt, 
                                           video_id=video_id, 
                                           progress=progress)
 
     #clean up the file
-    # clean_up_temp_files()
+    clean_up_temp_files()
 
     if not json:
         return final_summary_txt
