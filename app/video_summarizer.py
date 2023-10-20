@@ -6,15 +6,17 @@ from app import whisper_mgr as whisper
 from app import chunk_media as file_chunker
 from app import tweeter_mgr as TweeterMgr
 from app import logger
+from app import mgr_openai as MyOpenAI
+from app import my_helper as HELPER
 import datetime
 import time
 import os
 
-import openai
 import json
 import tiktoken
 
 FILE_SUMMARY_BATCHES = "temp_data/temp_summary_batches.txt"
+FILE_SUMMARY_BATCHES_RESPONSES = "temp_data/temp_summary_batches_responses.txt"
 FILE_FINAL_SUMMARY = "temp_data/video_FINAL_SUMMARY.txt"
 FILE_VIDEO_SUBTITLES = "temp_data/temp_video_subtitles.txt"
 FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
@@ -22,42 +24,11 @@ FILE_VIDEO_SUBTITLES_RAW = "temp_data/temp_video_subtitles-raw.txt"
 DEBUG = True
 SLEEP_SECONDS = 25
 
-
 enc = None
 
 # Load config values
 with open(r'config.json') as config_file:
     config_details2 = json.load(config_file)
-# //os.getenv("OPENAI_API_KEY")
-AI_API_KEY = os.getenv('AI_API_KEY') or None
-
-if AI_API_KEY is None:
-    raise BaseException('Missing sec configuration (video_summarizer)')
-
-openai.api_key = AI_API_KEY
-
-def save_file( file_name, content):
-    if file_name:
-        with open(file_name, "w") as f_out:
-            f_out.write( content )
-
-
-def get_completion(prompt, file_name=None, model=config_details2['OA_CHAT_GPT_MODEL']):
-    logger.logger.info("nr. of tokens: {}, string len: {}".format( num_tokens_from_string(prompt), len(prompt) ))
-    messages = [{"role": "user", "content": prompt}]
-    response = openai.ChatCompletion.create(
-        model=model,
-        messages=messages,
-        temperature=0, # this is the degree of randomness of the model's output,
-        # engine=config_details['MS_CHAT_GPT_MODEL']
-    )
-
-    if file_name:
-        f_out = open(file_name, "w")
-        f_out.write( response.choices[0].message["content"] )
-        f_out.close()
-
-    return response.choices[0].message["content"]
 
 
 def num_tokens_from_string(string: str) -> int:
@@ -70,11 +41,6 @@ def num_tokens_from_string(string: str) -> int:
     num_tokens = len(enc.encode(string))
 
     return num_tokens
-
-
-def print_response(prompt, text=None):
-    response = get_completion(prompt)
-    logger.logger.info(response)
 
 
 def download_transcript(video_id, progress=None): 
@@ -115,104 +81,66 @@ def download_transcript(video_id, progress=None):
     return text, text_raw
 
 
-def test_load_summary_batches():
-    with open(FILE_SUMMARY_BATCHES, 'r') as file:
-        text = file.read()
+def get_transcript_summaries( transcript, batch_prompt, progress=None ):
+    # for debugging purposes
+    HELPER.SAVE_FILE('{}\n'.format(datetime.datetime.now()), FILE_SUMMARY_BATCHES, append=True)
+    HELPER.SAVE_FILE('{}\n'.format(datetime.datetime.now()), FILE_SUMMARY_BATCHES_RESPONSES, append=True)
+    words = transcript.split(' ')
 
-    return text
+    MAX_WORDS = 750*7 - len( batch_prompt.split(' ') )
 
+    batches = []
+    for i in range(0, len(words), MAX_WORDS):
+        transcript_snippet = ' '.join(words[i:i+MAX_WORDS])
+        single_batch = '"""{}"""'.format( transcript_snippet )
+        batches.append( single_batch )
+        HELPER.SAVE_FILE('{}\n'.format(single_batch), FILE_SUMMARY_BATCHES, append=True)
 
-def test_load_final_summary():
-    logger.logger.info('Loading dummy summary...')
-    time.sleep( 2 )
-    with open(FILE_FINAL_SUMMARY, 'r') as file:
-        text = file.read()
-
-    return text
-
-
-def summarize_transcript_in_batches( text, batch_promp, progress=None ):
-    if DEBUG:
-            with open(FILE_SUMMARY_BATCHES, 'w') as f_out:
-                f_out.write( 'Date: {}\n\n'.format( datetime.datetime.now() ) )
-
-    summary_batches = []
-
-    # Setting batch size and context size
-    batch_size = 2500
-
-    # Tokenize the script
-    script_tokens = text.split(" ")
-
-    total_batches = round(len(script_tokens)/batch_size)
-
-    count = 0
     prog = 0.5
+    total_time = 0
     start = time.time()
-    cummulative_time = 0
-    average_processing_time = 0
-    for i in range(0, len(script_tokens), batch_size):
-        text_to_edit = " ".join(script_tokens[i:i+batch_size])
+    total_batches = len( batches )
+    responses = []
+    for i,single_batch in enumerate(batches): 
+            logger.logger.info( "AI processing batch {} of {}".format( i+1, total_batches ) )
+            if progress != None:
+                progress(prog, "AI processing batch {} of {}".format( i+1, total_batches ))
+                prog = prog + 0.03    
 
-        # print_response(prompt, text)
-        logger.logger.info( "AI processing batch {} of {}".format( count+1, total_batches ) )
-        if progress != None:
-            progress(prog, "AI processing batch {} of {}".format( count+1, total_batches ))
-            prog = prog + 0.03
+            response = MyOpenAI.completions_with_backoff( system_prompt=batch_prompt, 
+                                                          user_prompt=single_batch )
 
-        response = get_completion( '{}\n---\n{}'.format( batch_promp, text_to_edit ))
+            end = time.time()
+            response = '<summary>{}</summary>\n'.format(HELPER.FIX_TEXT(response))
+            responses.append( response )
+            HELPER.SAVE_FILE(response, FILE_SUMMARY_BATCHES_RESPONSES, append=True)
+            logger.logger.info( 'Batch #{}: elapsed time {}s'.format(i+1, round(end-start)) )
+            total_time = total_time + round(end-start)
+            start = end
 
-        if DEBUG:
-             with open(FILE_SUMMARY_BATCHES, "a") as f_out:
-                f_out.write( "- {}\n".format( response ) )
+    logger.logger.info( 'Total elapsed time (for all batches) {}s'.format( total_time ) )
 
-        summary_batches.append( "- {}\n".format( response ) )
-        
-        end = time.time()
-        time_elapsed = round(end - start)
-        average_processing_time = ( average_processing_time+time_elapsed) / 2.0
-        cummulative_time = cummulative_time + time_elapsed
-        logger.logger.info('Time elapsed --> single_batch {}s average {}s cumulative {}s'.format( time_elapsed,average_processing_time,cummulative_time ))
-        
-        count = count + 1
-        if count % 3 == 0:
-            logger.logger.info('Sleep {} seconds'.format( SLEEP_SECONDS ))
-            time.sleep( SLEEP_SECONDS )
-
-        start = end
-
-    return ''.join(summary_batches)
+    return '\n'.join(responses)
 
 
-def __extract_section( text, header ):
-
-    # first find the beginnig of the blog
-    # add title to it too as we have set format
-    start = text.index(header)
-    start = start + len (header)
-    end = text.index( '\n', start)
-
-    # get the title
-    title = text[start:end]
-    # skip the title and find the end of text
-    start = start + len(title) + 2 #2 escapes
-    end = text.index('\'\'\'', start)
-
-    return title, text[start:end]
-
-
-def create_final_summary(text, final_prompt, progress=None):
-    logger.logger.info("Creating final summary...")
+def get_final_summary(summary_batches, prompt, video_id, progress=None):
     if progress != None:
         progress(0.9, 'Creating final summary...')
-
-    response = get_completion( '{}\n---\n{}'.format( final_prompt, text ) )
-    logger.logger.info('Done!')
-
+    logger.logger.info('Creating final summary')
+    start = time.time()
+    final_summary_txt = MyOpenAI.completions_with_backoff( system_prompt=prompt, 
+                                                           user_prompt='\n'.join( summary_batches )
+                                                )
+    logger.logger.info('Elapsed time {}s'.format(round(time.time() - start)))
     if progress != None:
-        progress(1, 'Done')
+        progress(1.0, 'Done')
 
-    return response
+    s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
+    path_parts = FILE_FINAL_SUMMARY.split('/')
+    with open('{}/{}-{}-{}'.format( path_parts[0], s1, video_id, path_parts[1] ), "w") as f_out:
+            f_out.write( final_summary_txt )
+
+    return final_summary_txt
 
 
 # def test_twitter():
@@ -244,38 +172,25 @@ def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=
     transcript, transcript_raw = download_transcript( video_id, progress )
     logger.logger.info("nr. of tokens: {}, transcript length: {}".format( num_tokens_from_string(transcript), len(transcript) ))
 
-    summary_batches = summarize_transcript_in_batches( text=transcript, batch_promp=batch_prompt, progress=progress )
-
+    summary_batches = get_transcript_summaries( transcript=transcript, 
+                                                batch_prompt=batch_prompt, 
+                                                progress=progress )
+  
     # # ### PROMPT TESTING
-    # summary_batches = load_summary_batches() 
+     # summary_batches = HELPER.OPEN_FILE(FILE_SUMMARY_BATCHES_RESPONSES)
+    # summary_batches = HELPER.FIX_TEXT( summary_batches )
     ###
 
-    final_summary_txt = create_final_summary( text=summary_batches, final_prompt=final_prompt, progress=progress )
-    s1 = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
-    path_parts = FILE_FINAL_SUMMARY.split('/')
-    with open('{}/{}-{}-{}'.format( path_parts[0], s1, video_id, path_parts[1] ), "w") as f_out:
-            f_out.write( final_summary_txt )
+    final_summary_txt = get_final_summary(summary_batches=summary_batches, 
+                                          prompt=PROMPT.SYSTEM_PROMPT_FINAL, 
+                                          video_id=video_id, 
+                                          progress=progress)
 
     #clean up the file
-    clean_up_temp_files()
+    # clean_up_temp_files()
 
     if not json:
         return final_summary_txt
     else:
         json_str = {"video_id": video_id, "summary":final_summary_txt}
         return json.loads( json_str )
-
-
-def main():
-    VIDEO_ID = 'TnyMFI0uoXY'
-    summary = transcribe_video(VIDEO_ID)
-
-    # test_twitter()
-
-if __name__ == "__main__":
-    if config_details2['IGNORE_SSL']:
-        logger.logger.warn( "ignore SSL" )
-        with ignoreSSL.no_ssl_verification():
-            main()
-    else:
-        main()

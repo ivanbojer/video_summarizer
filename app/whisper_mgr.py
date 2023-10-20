@@ -10,7 +10,7 @@ file_name = None
 AI_API_KEY = os.getenv('AI_API_KEY') or None
 
 if AI_API_KEY is None:
-    raise BaseException('Missing sec configuration (video_summarizer)')
+    raise BaseException('Missing sec configuration (whisper_mgr)')
 
 with open(r'config.json') as config_file:
     config_details2 = json.load(config_file)
