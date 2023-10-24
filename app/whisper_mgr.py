@@ -48,7 +48,7 @@ def download_audio( video_id ):
         'postprocessors': [{  # Extract audio using ffmpeg
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192'
+            'preferredquality': '96'
         }]
     }
 
