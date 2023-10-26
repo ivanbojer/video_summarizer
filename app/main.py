@@ -111,6 +111,27 @@ async def get_support_bundle(request: Request):
         return FileResponse('file.log')
     else:
         return RedirectResponse(url='logout')
+    
+
+@app.route('/support_access_final')
+async def get_support_bundle(request: Request):
+    user = request.session.get('user')
+
+    if user and is_authorized(user['email']):
+        try:
+            path = './temp_data'
+            files = os.listdir(path)
+            files_new = []
+            for f in files:
+                if f.endswith('FINAL_SUMMARY.txt'):
+                    files_new.append( f )
+
+            mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
+            return FileResponse( list(sorted(files_new, key=mtime))[-1] )
+        except Exception as e:
+            logger.logger.warning('No final files: {}'.format( e ))
+    else:
+        return RedirectResponse(url='logout')
 
 
 @app.route('/auth')
