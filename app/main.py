@@ -127,7 +127,10 @@ async def get_support_bundle(request: Request):
                     files_new.append( f )
 
             mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
-            return FileResponse( list(sorted(files_new, key=mtime))[-1] )
+            most_recent_file = list(sorted(files_new, key=mtime))[-1]
+            logger.logger.info('Retrieving file: {}/{}'.format(path, most_recent_file))
+
+            return FileResponse( '{}/{}'.format(path, most_recent_file))
         except Exception as e:
             logger.logger.warning('No final files: {}'.format( e ))
     else:
