@@ -21,7 +21,7 @@ def init():
 
     # configure logging for backoff library
     logging.getLogger("backoff").addHandler(logging.StreamHandler())
-    # logging.getLogger('backoff').setLevel(logging.ERROR)
+    logging.getLogger('backoff').setLevel(logging.INFO)
 
 
 @backoff.on_exception(backoff.expo, openai.error.RateLimitError)
