@@ -56,27 +56,44 @@ def summarize_text(video_id, batch_prompt, final_prompt, progress=gr.Progress())
     return gr.Button(interactive=False), summary
 
 
+def get_generic_prompt_template( btn ):
+    return my_prompt.GENERIC_SYSTEM_PROMPT_BATCHES, my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
+
+
+def get_uncle_prompt_template( btn ):
+    return my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES, my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+
+
 with gr.Blocks() as demo:
     with gr.Box():
-        with gr.Row():
-            with gr.Group():
-                video_id = gr.Text(label="Video id:")
-                batch_prompt = gr.Textbox(
-                    label="Batch prompt:", value=my_prompt.SYSTEM_PROMPT_BATCHES
-                )
-                final_prompt = gr.Textbox(
-                    label="Final prompt:", value=my_prompt.SYSTEM_PROMPT_FINAL
-                )
-                btn = gr.Button("Transcribe")
-            with gr.Group():
-                out = gr.TextArea(label="Summary output:", lines=34)
+        with gr.Column():
+            with gr.Row():
+                with gr.Group():
+                    video_id = gr.Text(label="Video id:")
+                    batch_prompt = gr.Textbox(
+                        label="Batch prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES
+                    )
+                    final_prompt = gr.Textbox(
+                        label="Final prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+                    )
+                    btn = gr.Button("Transcribe")
+                with gr.Group():
+                    out = gr.TextArea(label="Summary output:", lines=34)
 
-            btn.click(
-                fn=summarize_text,
-                inputs=[video_id, batch_prompt, final_prompt],
-                outputs=[btn, out],
-            )
-    gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False)
+                btn.click(
+                    fn=summarize_text,
+                    inputs=[video_id, batch_prompt, final_prompt],
+                    outputs=[btn, out],
+                )
+            with gr.Box():
+                gr.Markdown('Prompt examples')
+                with gr.Row():
+                    btn_gen = gr.Button('Generic')
+                    btn_bruce = gr.Button('Uncle Bruce')
+
+                btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
+                btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
+        gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False)
 
 
 app = FastAPI()
