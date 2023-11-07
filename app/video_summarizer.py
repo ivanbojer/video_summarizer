@@ -102,7 +102,10 @@ def get_transcript_summaries(transcript, batch_prompt, progress=None):
     )
     words = transcript.split(" ")
 
-    MAX_WORDS = 750 * 7 - len(batch_prompt.split(" "))
+    # MAX_WORDS = 750 * 7 - len(batch_prompt.split(" "))
+    # 25000 words is about 20000 tokens (limitation per minute)
+    MAX_WORDS = 17000 - len(batch_prompt.split(" "))
+    logger.logger.info('Max words is: {}'.format( MAX_WORDS ))
 
     batches = []
     for i in range(0, len(words), MAX_WORDS):
@@ -121,6 +124,9 @@ def get_transcript_summaries(transcript, batch_prompt, progress=None):
         if progress != None:
             progress(prog, "AI processing batch {} of {}".format(i + 1, total_batches))
             prog = prog + 0.03
+
+        w_len = batch_prompt + single_batch
+        logger.logger.info('Processing {} words == {} tokens'.format( len( w_len.split(' ') ), num_tokens_from_string(w_len)))
 
         response = MyOpenAI.completions_with_backoff(
             system_prompt=batch_prompt, user_prompt=single_batch

@@ -3,16 +3,23 @@ import backoff
 import logging
 import os
 import time
+import json
 from app import my_helper as HELPER
 from openai.error import RateLimitError
+
+# Load config values
+with open(r"config.json") as config_file:
+    config_details2 = json.load(config_file)
 
 AI_API_KEY = None
 
 
 def init():
-    global AI_API_KEY
+    global AI_API_KEY, GPT_MODEL
 
     AI_API_KEY = os.getenv("AI_API_KEY") or None
+    # GPT_MODEL = "gpt-4-1106-preview"
+    GPT_MODEL = config_details2["OA_CHAT_GPT_MODEL"]
 
     if AI_API_KEY is None:
         raise BaseException("Missing sec configuration (video_summarizer)")
@@ -36,7 +43,7 @@ def completions_with_backoff(system_prompt, user_prompt):
         {"role": "user", "content": user_prompt},
     ]
     response = openai.ChatCompletion.create(
-        model="gpt-4", messages=messages, temperature=0
+        model=GPT_MODEL, messages=messages, temperature=0
     )
 
     return response.choices[0].message["content"]
@@ -62,7 +69,7 @@ def delayed_completion(
     while response is None:
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-4", messages=messages, temperature=0
+                model=GPT_MODEL, messages=messages, temperature=0
             )
         except RateLimitError as rate_err:
             print(

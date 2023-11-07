@@ -76,13 +76,14 @@ with gr.Blocks() as demo:
                 inputs=[video_id, batch_prompt, final_prompt],
                 outputs=[btn, out],
             )
+    gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False)
 
 
 app = FastAPI()
 
 
 def is_authorized(user_email):
-    return user_email in ["ivan@bojerco.com"]
+    return user_email in ["ivan@bojerco.com", "patelgunjan5@gmail.com"]
 
 
 @app.middleware("http")
