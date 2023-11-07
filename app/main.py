@@ -64,7 +64,20 @@ def get_uncle_prompt_template( btn ):
     return my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES, my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
 
 
-with gr.Blocks() as demo:
+css = """
+.button {
+  background-color: #04AA6D; /* Green */
+  border: none;
+  color: red;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+"""
+
+with gr.Blocks(theme=gr.themes.Glass()) as demo:
     with gr.Box():
         with gr.Column():
             with gr.Row():
@@ -86,14 +99,15 @@ with gr.Blocks() as demo:
                     outputs=[btn, out],
                 )
             with gr.Box():
-                gr.Markdown('Prompt examples')
-                with gr.Row():
-                    btn_gen = gr.Button('Generic')
-                    btn_bruce = gr.Button('Uncle Bruce')
+                gr.Markdown('**Prompt examples**')
+                with gr.Row(css=".smallbutton {font-size: 64px !important}"):
+                    btn_gen = gr.Button('Generic', scale=0, size='sm')
+                    btn_bruce = gr.Button('Uncle Bruce', scale=0, size='sm')
 
                 btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
                 btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
         gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False)
+        gr.Markdown('[Logout](/logout)' ,show_label=False, container=False)
 
 
 app = FastAPI()
