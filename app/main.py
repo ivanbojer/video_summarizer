@@ -64,48 +64,50 @@ def get_uncle_prompt_template( btn ):
     return my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES, my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
 
 
-css = """
-.button {
-  background-color: #04AA6D; /* Green */
-  border: none;
-  color: red;
-  padding: 15px 32px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-}
+CSS = """
+.contain { display: flex; flex-direction: column; }
+#component-0 { height: 100%; }
+#summary { flex-grow: 1; }
 """
 
-with gr.Blocks(theme=gr.themes.Glass()) as demo:
+YOUTUBE_URL = 'https://www.youtube.com/watch?v=[VIDEO_ID]'
+# def update_label( x ):
+#     x.value('{}{}'.format( YOUTUBE_URL, x.label ))
+
+with gr.Blocks(theme=gr.themes.Glass(), css=CSS) as demo:
     with gr.Box():
         with gr.Column():
             with gr.Row():
+                # input panels (left-side)
                 with gr.Group():
-                    video_id = gr.Text(label="Video id:")
+                    video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
                     batch_prompt = gr.Textbox(
                         label="Batch prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES
                     )
                     final_prompt = gr.Textbox(
                         label="Final prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
                     )
-                    btn = gr.Button("Transcribe")
+
+                # summary output 
                 with gr.Group():
-                    out = gr.TextArea(label="Summary output:", lines=34)
+                    out = gr.TextArea(label="Summary output:", lines=30)
 
-                btn.click(
-                    fn=summarize_text,
-                    inputs=[video_id, batch_prompt, final_prompt],
-                    outputs=[btn, out],
-                )
+                # video_id.change( update_label, inputs=video_id )
+            
+            btn = gr.Button("Transcribe") 
+            btn.click(
+                        fn=summarize_text,
+                        inputs=[video_id, batch_prompt, final_prompt],
+                        outputs=[btn, out],
+                    )
             with gr.Box():
-                gr.Markdown('**Prompt examples**')
-                with gr.Row(css=".smallbutton {font-size: 64px !important}"):
-                    btn_gen = gr.Button('Generic', scale=0, size='sm')
-                    btn_bruce = gr.Button('Uncle Bruce', scale=0, size='sm')
+                        gr.Markdown('**Prompt examples**')
+                        with gr.Row(css=".smallbutton {font-size: 64px !important}"):
+                            btn_gen = gr.Button('Generic', scale=0, size='sm')
+                            btn_bruce = gr.Button('Uncle Bruce', scale=0, size='sm')
 
-                btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
-                btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
+                        btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
+                        btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
         gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False)
         gr.Markdown('[Logout](/logout)' ,show_label=False, container=False)
 
@@ -222,6 +224,6 @@ async def public(request: Request):
 
     return HTMLResponse("<a href=/login>Login</a>")
 
-
+demo.show_api = False
 gradio_app = gr.mount_gradio_app(app, demo.queue(), "/{}".format(OBFUSCATED_MNT_POINT))
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
