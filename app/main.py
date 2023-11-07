@@ -85,10 +85,10 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
             with gr.Group():
                 video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
                 batch_prompt = gr.Textbox(
-                    label="Batch prompt (in case transcript is too long and we need to split it):", value=my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES
+                    label="Batch prompt (in case transcript is too long and we need to split it):", value=my_prompt.GENERIC_SYSTEM_PROMPT_BATCHES
                 )
                 final_prompt = gr.Textbox(
-                    label="Final prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+                    label="Final prompt:", value=my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
                 )
 
             btn = gr.Button("Transcribe") 
