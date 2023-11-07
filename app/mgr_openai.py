@@ -18,7 +18,6 @@ def init():
     global AI_API_KEY, GPT_MODEL
 
     AI_API_KEY = os.getenv("AI_API_KEY") or None
-    # GPT_MODEL = "gpt-4-1106-preview"
     GPT_MODEL = config_details2["OA_CHAT_GPT_MODEL"]
 
     if AI_API_KEY is None:

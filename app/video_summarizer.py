@@ -201,15 +201,19 @@ def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=
     # for debugging purposes
     HELPER.SAVE_FILE(transcript, FILE_VIDEO_SUBTITLES)
     HELPER.SAVE_FILE(transcript_raw, FILE_VIDEO_SUBTITLES_RAW)
+
+    num_tokens = num_tokens_from_string( transcript + final_prompt )
     logger.logger.info(
         "nr. of tokens: {}, transcript length: {}".format(
             num_tokens_from_string(transcript), len(transcript)
         )
     )
 
-    summary_batches = get_transcript_summaries(
-        transcript=transcript, batch_prompt=batch_prompt, progress=progress
-    )
+    summary_batches = ["<summary>{}</summary>\n".format( transcript )]
+    if num_tokens >= config_details2['MAX_NR_TOKENS']:
+        summary_batches = get_transcript_summaries(
+            transcript=transcript, batch_prompt=batch_prompt, progress=progress
+        )
 
     # # ### PROMPT TESTING
     # summary_batches = HELPER.OPEN_FILE(FILE_SUMMARY_BATCHES_RESPONSES)
@@ -226,8 +230,10 @@ def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=
     # clean up the file
     clean_up_temp_files()
 
+    cost = num_tokens/1000. * config_details2['PRICE_INPUT_1K_TOKENS'] + num_tokens_from_string( final_summary_txt )/1000. * config_details2['PRICE_OUTPUT_1K_TOKENS']
+    cost = round(cost, 2)
     if not json:
-        return final_summary_txt
+        return final_summary_txt, cost
     else:
-        json_str = {"video_id": video_id, "summary": final_summary_txt}
+        json_str = {"video_id": video_id, "summary": final_summary_txt, "cost": cost}
         return json.loads(json_str)

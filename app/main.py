@@ -47,13 +47,14 @@ def summarize_text(video_id, batch_prompt, final_prompt, progress=gr.Progress())
     progress(float(0.0), desc="Starting...")
     # summary = vid.test_load_final_summary()
 
-    summary = vid.transcribe_video(
+    summary, cost = vid.transcribe_video(
         video_id=video_id,
         batch_prompt=batch_prompt,
         final_prompt=final_prompt,
         progress=progress,
     )
-    return gr.Button(interactive=False), summary
+
+    return gr.Button(interactive=False), summary, gr.Markdown('*Incurred cost: ${}*'.format( cost ), show_label=False, container=False)
 
 
 def get_generic_prompt_template( btn ):
@@ -66,40 +67,32 @@ def get_uncle_prompt_template( btn ):
 
 CSS = """
 .contain { display: flex; flex-direction: column; }
+.right-align { text-align: right;}
 #component-0 { height: 100%; }
 #summary { flex-grow: 1; }
 """
+# css=""".gradio-container {margin: 0 !important};"""
 
 YOUTUBE_URL = 'https://www.youtube.com/watch?v=[VIDEO_ID]'
 # def update_label( x ):
 #     x.value('{}{}'.format( YOUTUBE_URL, x.label ))
 
-with gr.Blocks(theme=gr.themes.Glass(), css=CSS) as demo:
+with gr.Blocks(theme=gr.themes.Glass()) as demo:
     with gr.Box():
         with gr.Column():
-            with gr.Row():
-                # input panels (left-side)
-                with gr.Group():
-                    video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
-                    batch_prompt = gr.Textbox(
-                        label="Batch prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES
-                    )
-                    final_prompt = gr.Textbox(
-                        label="Final prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
-                    )
 
-                # summary output 
-                with gr.Group():
-                    out = gr.TextArea(label="Summary output:", lines=30)
+            # input panels (left-side)
+            with gr.Group():
+                video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
+                batch_prompt = gr.Textbox(
+                    label="Batch prompt (in case transcript is too long and we need to split it):", value=my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES
+                )
+                final_prompt = gr.Textbox(
+                    label="Final prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+                )
 
-                # video_id.change( update_label, inputs=video_id )
-            
             btn = gr.Button("Transcribe") 
-            btn.click(
-                        fn=summarize_text,
-                        inputs=[video_id, batch_prompt, final_prompt],
-                        outputs=[btn, out],
-                    )
+            
             with gr.Box():
                         gr.Markdown('**Prompt examples**')
                         with gr.Row(css=".smallbutton {font-size: 64px !important}"):
@@ -108,8 +101,21 @@ with gr.Blocks(theme=gr.themes.Glass(), css=CSS) as demo:
 
                         btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
                         btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
-        gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False)
+
+            # summary output 
+            with gr.Group():
+                out = gr.TextArea(label="Summary output:", lines=20)
+            # video_id.change( update_label, inputs=video_id )
+        
+        with gr.Row():
+            cost = gr.Markdown('*Incurred cost:*', show_label=False, container=False)
+            gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False, elem_classes='right-align')
         gr.Markdown('[Logout](/logout)' ,show_label=False, container=False)
+
+        btn.click(
+                fn=summarize_text,
+                inputs=[video_id, batch_prompt, final_prompt],
+                outputs=[btn, out, cost])
 
 
 app = FastAPI()
