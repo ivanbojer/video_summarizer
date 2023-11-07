@@ -1,6 +1,9 @@
 {
     "OA_CHAT_GPT_MODEL":"gpt-4-1106-preview",
     "OA_AUDIO_MODEL": "whisper-1",
-    "IGNORE_SSL": 0
+    "IGNORE_SSL": 0,
+    "MAX_NR_TOKENS": 128000,
+    "PRICE_INPUT_1K_TOKENS": 0.01,
+    "PRICE_OUTPUT_1K_TOKENS": 0.03
 }
 
