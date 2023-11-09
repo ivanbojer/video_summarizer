@@ -54,7 +54,7 @@ def summarize_text(video_id, batch_prompt, final_prompt, progress=gr.Progress())
         progress=progress,
     )
 
-    return gr.Button(interactive=False), summary, gr.Markdown('*Incurred cost: ${}*'.format( cost ), show_label=False, container=False)
+    return gr.Button(interactive=False), summary, gr.Markdown('*Incurred cost: ${}*'.format( cost ), show_label=False)
 
 
 def get_generic_prompt_template( btn ):
@@ -78,7 +78,7 @@ YOUTUBE_URL = 'https://www.youtube.com/watch?v=[VIDEO_ID]'
 #     x.value('{}{}'.format( YOUTUBE_URL, x.label ))
 
 with gr.Blocks(theme=gr.themes.Glass()) as demo:
-    with gr.Box():
+    with gr.Blocks():
         with gr.Column():
 
             # input panels (left-side)
@@ -93,9 +93,9 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
 
             btn = gr.Button("Transcribe") 
             
-            with gr.Box():
+            with gr.Blocks():
                         gr.Markdown('**Prompt examples**')
-                        with gr.Row(css=".smallbutton {font-size: 64px !important}"):
+                        with gr.Row():
                             btn_gen = gr.Button('Generic', scale=0, size='sm')
                             btn_bruce = gr.Button('Uncle Bruce', scale=0, size='sm')
 
@@ -108,9 +108,9 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
             # video_id.change( update_label, inputs=video_id )
         
         with gr.Row():
-            cost = gr.Markdown('*Incurred cost:*', show_label=False, container=False)
-            gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, container=False, elem_classes='right-align')
-        gr.Markdown('[Logout](/logout)' ,show_label=False, container=False)
+            cost = gr.Markdown('*Incurred cost:*', show_label=False)
+            gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, elem_classes='right-align')
+        gr.Markdown('[Logout](/logout)' ,show_label=False)
 
         btn.click(
                 fn=summarize_text,

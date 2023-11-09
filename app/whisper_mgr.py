@@ -7,7 +7,7 @@ from app import ignoreSSL
 from app import logger
 
 file_name = None
-AI_API_KEY = os.getenv("AI_API_KEY") or None
+AI_API_KEY = os.getenv("OPENAI_API_KEY") or None
 
 if AI_API_KEY is None:
     raise BaseException("Missing sec configuration (whisper_mgr)")
