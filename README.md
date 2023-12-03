@@ -6,6 +6,12 @@
     sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
     sudo chmod a+rx /usr/local/bin/youtube-dl
 
+- download video and recode into mp4 if not available
+    yt-dlp -S res,ext:mp4:m4a --recode "https://www.youtube.com/watch?v=fD3R6ZpHrAQ"
+
+## ffmpeg
+- ffmpeg -i input.webm output.mp4
+
 
 ## docker build
 - docker build . -t videosummarizer
