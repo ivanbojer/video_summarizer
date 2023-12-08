@@ -2,8 +2,7 @@ from requests_oauthlib import OAuth1Session
 import os
 import json
 import webbrowser
-from app import ignoreSSL
-from app import logger
+import logger
 
 
 class TweeterMgr:
@@ -110,6 +109,7 @@ class TweeterMgr:
             return self.__post_tweet(payload, fake_run)
 
     def __post_tweet(self, payload, fake_run=False):
+        # payload_unicode = payload.decode("utf-8")
         json_response = None
         if not fake_run:
             # Making the request
@@ -256,26 +256,19 @@ class TweeterMgr:
         return json_response
 
     def test(self):
-        text = """
-    Uncle Bruce, a seasoned figure in the world of finance and trading, has left an indelible mark on my journey as an investor. I first came across him several years ago when my curiosity was piqued by the GameStop (GME) frenzy. Little did I know that this initial interest would lead me to a wealth of knowledge and wisdom.
-    Initially, Uncle Bruce's focus was on deciphering the enigma that was GME, shedding light on its intricacies and market dynamics. However, as time flowed like a steady river, I began to realize that Uncle Bruce's expertise extended far beyond a single stock. His teachings transcended the realm of GameStop, delving into the world of options trading.
-    It was under Uncle Bruce's guidance that I honed my skills and became a more successful trader. His unique approach and insightful strategies transformed my understanding of the financial markets. Although GME may not be at the forefront of his discussions as it once was, Uncle Bruce's stories continue to serve as a wellspring of profound insights.
-    Uncle Bruce's background as a former broker adds a layer of authenticity to his teachings. His experiences in the brokerage industry provide a solid foundation for the wisdom he imparts to his followers.
-    In summary, Uncle Bruce's journey from unraveling the mysteries of GME to becoming a beacon of knowledge in options trading is a testament to his dedication and expertise. His life story, filled with valuable lessons and profound insights, continues to inspire and guide those who seek to navigate the complex world of finance.
+        text = u"""
+    Summary:
+The stock market is displaying resilience despite mixed news and concerns about the housing market and inflation. Interest rates have stabilized, but there's no clear direction for future rate movements. Analysts are not predicting significant profit growth for publicly traded companies in the coming years, which raises questions about the stock market's ability to reach new highs. In the options trading world, investors are considering various strategies, including writing cash-secured puts on AI (C3.ai Inc.) and monitoring GameStop (GME), which has shown a significant reduction in losses compared to the previous year. GameStop's CEO, Ryan Cohen, is now authorized to manage the company's investment portfolio, which could lead to strategic equity trades and potentially higher profits for the company. This move has sparked interest among investors, leading to a potential uptick in GameStop's stock price.
+
+3. Relevant Information to GameStop Performance:
+- GameStop significantly reduced its losses from the previous year.
+- CEO Ryan Cohen is now authorized to manage GameStop's investment portfolio.
+- The company has 1.2 billion in cash and is expected to start announcing profits every quarter.
+- GameStop is reducing costs and closing underperforming stores, which could lead to higher net profits.
+- Ryan Cohen's involvement in strategic investments could positively impact GameStop's stock price. In summary, Uncle Bruce's journey from unraveling the mysteries of GME to becoming a beacon of knowledge in options trading is a testament to his dedication and expertise. His life story, filled with valuable lessons and profound insights, continues to inspire and guide those who seek to navigate the complex world of finance.
     """
 
-        # send tweet (chunk if needed)
-        # post_tweet( text )
-
-        import video_summarizer
-
-        response = ""
-        with open(video_summarizer.FILE_FINAL_SUMMARY, "r") as file:
-            response = file.read()
-
-        title, text = video_summarizer.extract_blog_section(response)
-
-        self.post_tweet(text, title, True)
+        self.post_tweet(text, "title", False)
 
         # txt_chunks = self.__split_text_in_chunks(text)
         # for idx,c in enumerate(txt_chunks):
@@ -286,6 +279,5 @@ class TweeterMgr:
 
 
 if __name__ == "__main__":
-    with ignoreSSL.no_ssl_verification():
-        tw = TweeterMgr()
-        tw.test()
+    tw = TweeterMgr()
+    tw.test()
