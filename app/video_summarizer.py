@@ -2,9 +2,9 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import TranscriptsDisabled
 from app import ignoreSSL
 from app import my_prompt as PROMPT
-from app import whisper_mgr as whisper
+from app import mgr_whisper as whisper
 from app import chunk_media as file_chunker
-from app import tweeter_mgr as TweeterMgr
+from app import mgr_tweeter as TweeterMgr
 from app import logger
 from app import mgr_openai as MyOpenAI
 from app import my_helper as HELPER
