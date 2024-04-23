@@ -173,3 +173,4 @@ HEALING_MUSIC_DOWNLOAD.txt
 *.mp3
 client_secret.json
 video_summarizer.code-workspace
+.vscode

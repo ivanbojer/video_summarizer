@@ -122,7 +122,7 @@ app = FastAPI()
 
 
 def is_authorized(user_email):
-    return user_email in ["ivan@bojerco.com", "patelgunjan5@gmail.com", "lednizdy@gmail.com"]
+    return user_email in ["ivan@bojerco.com"]
 
 
 @app.middleware("http")
