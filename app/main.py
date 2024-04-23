@@ -43,13 +43,12 @@ oauth.register(
 )
 
 
-def summarize_text(video_id, batch_prompt, final_prompt, progress=gr.Progress()):
+def summarize_text(video_id, final_prompt, progress=gr.Progress()):
     progress(float(0.0), desc="Starting...")
     # summary = vid.test_load_final_summary()
 
     summary, cost = vid.transcribe_video(
         video_id=video_id,
-        batch_prompt=batch_prompt,
         final_prompt=final_prompt,
         progress=progress,
     )
@@ -58,11 +57,11 @@ def summarize_text(video_id, batch_prompt, final_prompt, progress=gr.Progress())
 
 
 def get_generic_prompt_template( btn ):
-    return my_prompt.GENERIC_SYSTEM_PROMPT_BATCHES, my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
+    return my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
 
 
 def get_uncle_prompt_template( btn ):
-    return my_prompt.UNCLE_SYSTEM_PROMPT_BATCHES, my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+    return my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
 
 
 CSS = """
@@ -84,9 +83,6 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
             # input panels (left-side)
             with gr.Group():
                 video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
-                batch_prompt = gr.Textbox(
-                    label="Batch prompt (in case transcript is too long and we need to split it):", value=my_prompt.GENERIC_SYSTEM_PROMPT_BATCHES
-                )
                 final_prompt = gr.Textbox(
                     label="Final prompt:", value=my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
                 )
@@ -99,8 +95,8 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
                             btn_gen = gr.Button('Generic', scale=0, size='sm')
                             btn_bruce = gr.Button('Uncle Bruce', scale=0, size='sm')
 
-                        btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
-                        btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[batch_prompt, final_prompt])
+                        btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[final_prompt])
+                        btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[final_prompt])
 
             # summary output 
             with gr.Group():
@@ -114,7 +110,7 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
 
         btn.click(
                 fn=summarize_text,
-                inputs=[video_id, batch_prompt, final_prompt],
+                inputs=[video_id, final_prompt],
                 outputs=[btn, out, cost])
 
 

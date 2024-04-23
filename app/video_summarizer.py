@@ -1,6 +1,5 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api import TranscriptsDisabled
-# from app import ignoreSSL
 from app import my_prompt as PROMPT
 from app import mgr_whisper as whisper
 from app import chunk_media as file_chunker
@@ -90,70 +89,13 @@ def download_transcript(video_id, progress=None):
     return text, text_raw
 
 
-def get_transcript_summaries(transcript, batch_prompt, progress=None):
-    # for debugging purposes
-    HELPER.SAVE_FILE(
-        "{}\n".format(datetime.datetime.now()), FILE_SUMMARY_BATCHES, append=True
-    )
-    HELPER.SAVE_FILE(
-        "{}\n".format(datetime.datetime.now()),
-        FILE_SUMMARY_BATCHES_RESPONSES,
-        append=True,
-    )
-    words = transcript.split(" ")
-
-    # MAX_WORDS = 750 * 7 - len(batch_prompt.split(" "))
-    # 25000 words is about 20000 tokens (limitation per minute)
-    MAX_WORDS = 17000 - len(batch_prompt.split(" "))
-    logger.logger.info('Max words is: {}'.format( MAX_WORDS ))
-
-    batches = []
-    for i in range(0, len(words), MAX_WORDS):
-        transcript_snippet = " ".join(words[i : i + MAX_WORDS])
-        single_batch = '"""{}"""'.format(transcript_snippet)
-        batches.append(single_batch)
-        HELPER.SAVE_FILE("{}\n".format(single_batch), FILE_SUMMARY_BATCHES, append=True)
-
-    prog = 0.5
-    total_time = 0
-    start = time.time()
-    total_batches = len(batches)
-    responses = []
-    for i, single_batch in enumerate(batches):
-        logger.logger.info("AI processing batch {} of {}".format(i + 1, total_batches))
-        if progress != None:
-            progress(prog, "AI processing batch {} of {}".format(i + 1, total_batches))
-            prog = prog + 0.03
-
-        w_len = batch_prompt + single_batch
-        logger.logger.info('Processing {} words == {} tokens'.format( len( w_len.split(' ') ), num_tokens_from_string(w_len)))
-
-        response = MyOpenAI.completions_with_backoff(
-            system_prompt=batch_prompt, user_prompt=single_batch
-        )
-
-        end = time.time()
-        response = "<summary>{}</summary>\n".format(HELPER.FIX_TEXT(response))
-        responses.append(response)
-        HELPER.SAVE_FILE(response, FILE_SUMMARY_BATCHES_RESPONSES, append=True)
-        logger.logger.info(
-            "Batch #{}: elapsed time {}s".format(i + 1, round(end - start))
-        )
-        total_time = total_time + round(end - start)
-        start = end
-
-    logger.logger.info("Total elapsed time (for all batches) {}s".format(total_time))
-
-    return "\n".join(responses)
-
-
-def get_final_summary(summary_batches, prompt, video_id, progress=None):
+def get_final_summary(text, prompt, video_id, progress=None):
     if progress != None:
         progress(0.9, "Creating final summary...")
     logger.logger.info("Creating final summary")
     start = time.time()
     final_summary_txt = MyOpenAI.completions_with_backoff(
-        system_prompt=prompt, user_prompt="\n".join(summary_batches)
+        system_prompt=prompt, user_prompt="\n{}".format(text)
     )
     logger.logger.info("Elapsed time {}s".format(round(time.time() - start)))
     if progress != None:
@@ -195,7 +137,7 @@ def clean_up_temp_files():
         logger.logger.warning("No mp3 files: {}".format(e))
 
 
-def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=None):
+def transcribe_video(video_id, final_prompt, json=False, progress=None):
     transcript, transcript_raw = download_transcript(video_id, progress)
     
     # for debugging purposes
@@ -209,19 +151,13 @@ def transcribe_video(video_id, batch_prompt, final_prompt, json=False, progress=
         )
     )
 
-    summary_batches = ["<summary>{}</summary>\n".format( transcript )]
-    if num_tokens >= config_details2['MAX_NR_TOKENS']:
-        summary_batches = get_transcript_summaries(
-            transcript=transcript, batch_prompt=batch_prompt, progress=progress
-        )
-
     # # ### PROMPT TESTING
     # summary_batches = HELPER.OPEN_FILE(FILE_SUMMARY_BATCHES_RESPONSES)
     # summary_batches = HELPER.FIX_TEXT( summary_batches )
     ###
 
     final_summary_txt = get_final_summary(
-        summary_batches=summary_batches,
+        text=transcript,
         prompt=final_prompt,
         video_id=video_id,
         progress=progress,
