@@ -7,7 +7,7 @@ Perform the following:
 5. Write Key Notes from the summary as bullet points
 6. Write a Twitter blog post from the moderate summary with a focus on Gamestop."""
 
-GENERIC_SYSTEM_PROMPT_FINAL = """You will receive a video transcript. These summaries represent a transcript of a YouTube video recording. Perform the following:
+GENERIC_SYSTEM_PROMPT_FINAL = """You will receive a video transcript of a YouTube video recording. Perform the following:
 1. Create a title out of the main focus of the text.
 2. Write a moderate summary of the given summaries.
 3. Extract relevant information.
