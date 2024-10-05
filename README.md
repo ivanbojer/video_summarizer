@@ -1,28 +1,22 @@
 # video_summarizer
 
-## youtube-dl
+Video summarizer will sumarize the content of the requested video using default or
+user defined prompt and post summary of it as a twitter blog.
 
-- https://github.com/ytdl-org/youtube-dl
-    sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl
-    sudo chmod a+rx /usr/local/bin/youtube-dl
+Here are the steps:
+- access user defined video and download close captions
+    - if captions are not present (caseof: new video)
+    - download video file
+    - extract audio using ffmpeg package
+- send close captions to openai together with user prompt
+- send part of the return to the twitter accouns as a blog post
+    - twitter api as of today does not allow for long text so we 
+        have to split text in a thread of a user-defined size.
+        Hopefully this is not needed in the future or with 
+        paid version of twitter subscription.
 
-- download video and recode into mp4 if not available
-    yt-dlp -S res,ext:mp4:m4a --recode "https://www.youtube.com/watch?v=fD3R6ZpHrAQ"
+## deployment
 
-## ffmpeg
-- ffmpeg -i input.webm output.mp4
-
-
-## docker build
-- docker build . -t videosummarizer
-- docker run -p 127.0.0.1:8080:8080 -t video
-
-## gcloud run
-- gcloud config set run/region us-central1
-- gcloud builds submit --tag [IMAGE] . 
-- gcloud run deploy videosummarizer --image [IMAGE]
--
-- gcloud run deploy videosummarizer --source .
-
-## artifactory
-- gcloud auth configure-docker us-central1-docker.pkg.dev
+I currently deploy this code in cloud run. Appropriate docker filer is present 
+that will be used to build image that then can be pushed to the google run
+(see NOTES.md for a cheat sheet).
