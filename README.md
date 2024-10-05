@@ -19,7 +19,7 @@ This is done in a few steps:
 
 I currently deploy this code in cloud run. Appropriate docker filer is present 
 that will be used to build image that then can be pushed to the google run
-- see [NOTES.md] (./NOTES.md) for a cheat sheet
+- see [NOTES.md](./NOTES.md) for a cheat sheet
 
 ## Configuration
 
@@ -30,6 +30,6 @@ Make sure you modify following files for your usage
 
 ## How to run
 
-- see [entrypoint.sh] (./entrypoint.sh) for local run
-- cloud run [NOTES.md] (./NOTES.md)
-- docket [NOTES.md] (./NOTES.md)
+- see [entrypoint.sh](./entrypoint.sh) for local run
+- cloud run [NOTES.md](./NOTES.md)
+- docket [NOTES.md](./NOTES.md)
