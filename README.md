@@ -1,9 +1,9 @@
-# video_summarizer
+# VIdeo Summarizer
 
 Video summarizer will sumarize the content of the requested video using default or
 user defined prompt and post summary of it as a twitter blog.
 
-Here are the steps:
+This is done in a few steps:
 - access user defined video and download close captions
     - if captions are not present (caseof: new video)
     - download video file
@@ -15,8 +15,21 @@ Here are the steps:
         Hopefully this is not needed in the future or with 
         paid version of twitter subscription.
 
-## deployment
+## Deployment
 
 I currently deploy this code in cloud run. Appropriate docker filer is present 
 that will be used to build image that then can be pushed to the google run
-(see NOTES.md for a cheat sheet).
+- see [NOTES.md] (./NOTES.md) for a cheat sheet
+
+## Configuration
+
+Make sure you modify following files for your usage
+
+- .env
+- config.json
+
+## How to run
+
+- see [entrypoint.sh] (./entrypoint.sh) for local run
+- cloud run [NOTES.md] (./NOTES.md)
+- docket [NOTES.md] (./NOTES.md)
