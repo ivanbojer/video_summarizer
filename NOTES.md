@@ -1,4 +1,4 @@
-# video_summarizer
+# Video Summarizer cheatsheet
 
 ## youtube-dl
 
