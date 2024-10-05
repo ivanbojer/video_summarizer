@@ -163,7 +163,7 @@ cython_debug/
 subtitles_raw.txt
 .gitignore
 subtitles.txt
-temp_*
+temp_data/*.txt
 config-openai.json
 token.json
 config-tweeter.json
