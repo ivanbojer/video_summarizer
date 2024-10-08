@@ -34,7 +34,10 @@ def num_tokens_from_string(string: str) -> int:
     global enc
 
     if not enc:
-        enc = tiktoken.encoding_for_model(config_details2["OA_CHAT_GPT_MODEL"])
+        if (config_details2["OA_CHAT_GPT_MODEL"] == "gpt-4o"):
+            enc = tiktoken.get_encoding('cl100k_base')
+        else:
+            enc = tiktoken.encoding_for_model(config_details2["OA_CHAT_GPT_MODEL"])
 
     """Returns the number of tokens in a text string."""
     num_tokens = len(enc.encode(string))

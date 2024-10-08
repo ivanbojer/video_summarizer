@@ -1,5 +1,6 @@
 {
-    "OA_CHAT_GPT_MODEL":"gpt-4-turbo-preview",
+    "OA_CHAT_GPT_MODEL":"gpt-4-turbo",
+    "OA_CHAT_GPT_MODEL_NEW":"gpt-4o",
     "OA_AUDIO_MODEL": "whisper-1",
     "IGNORE_SSL": 0,
     "MAX_NR_TOKENS": 128000,
