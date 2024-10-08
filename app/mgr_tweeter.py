@@ -4,6 +4,7 @@ import json
 import webbrowser
 import logger
 
+TW_TOKEN_FILE = 'tw_token.json'
 
 class TweeterMgr:
     # In your terminal please set your environment variables by running the following lines of code.
@@ -14,6 +15,7 @@ class TweeterMgr:
     FOOTER = " #GME #Gamestop #Superstonk"
     HEADER = " Uncle Bruce's Wisdom"
     TW_THREAD_COUNT_CHARS = len("xx/xx ")
+
     config_details2 = None
 
     def __init__(
@@ -40,7 +42,7 @@ class TweeterMgr:
             "TW_CONSUMER_SECRET"
         )  # os.environ.get("CONSUMER_SECRET")
 
-        if not os.path.exists("token.json"):
+        if not os.path.exists( TW_TOKEN_FILE ):
             # Get request token
             request_token_url = "https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write"
             oauth = OAuth1Session(consumer_key, client_secret=consumer_secret)
@@ -74,10 +76,10 @@ class TweeterMgr:
             )
             oauth_tokens = oauth.fetch_access_token(access_token_url)
 
-            with open("token.json", "w") as tok_file:
+            with open( TW_TOKEN_FILE, "w") as tok_file:
                 tok_file.write(json.dumps(oauth_tokens))
         else:
-            with open("token.json", "r") as tok_file:
+            with open(TW_TOKEN_FILE, "r") as tok_file:
                 oauth_tokens = json.load(tok_file)
 
         access_token = oauth_tokens["oauth_token"]
@@ -255,7 +257,7 @@ class TweeterMgr:
 
         return json_response
 
-    def test(self):
+    def test1(self):
         text = u"""
     Summary:
 The stock market is displaying resilience despite mixed news and concerns about the housing market and inflation. Interest rates have stabilized, but there's no clear direction for future rate movements. Analysts are not predicting significant profit growth for publicly traded companies in the coming years, which raises questions about the stock market's ability to reach new highs. In the options trading world, investors are considering various strategies, including writing cash-secured puts on AI (C3.ai Inc.) and monitoring GameStop (GME), which has shown a significant reduction in losses compared to the previous year. GameStop's CEO, Ryan Cohen, is now authorized to manage the company's investment portfolio, which could lead to strategic equity trades and potentially higher profits for the company. This move has sparked interest among investors, leading to a potential uptick in GameStop's stock price.
@@ -267,6 +269,9 @@ The stock market is displaying resilience despite mixed news and concerns about 
 - GameStop is reducing costs and closing underperforming stores, which could lead to higher net profits.
 - Ryan Cohen's involvement in strategic investments could positively impact GameStop's stock price. In summary, Uncle Bruce's journey from unraveling the mysteries of GME to becoming a beacon of knowledge in options trading is a testament to his dedication and expertise. His life story, filled with valuable lessons and profound insights, continues to inspire and guide those who seek to navigate the complex world of finance.
     """
+        
+        text = u"""
+This is a test"""
 
         self.post_tweet(text, "title", False)
 
@@ -278,6 +283,13 @@ The stock market is displaying resilience despite mixed news and concerns about 
         #     logger.logger.info( c )
 
 
+    def test2(self):
+        summary_json = None
+        with open('temp_data/20241008.155901--YjSXZGLgAY-video_FINAL_SUMMARY.txt', 'r') as f:
+            summary_json = json.load(f)
+
+        self.post_tweet(summary_json['TITLE'], summary_json['TITLE'], False)
+
 if __name__ == "__main__":
     tw = TweeterMgr()
-    tw.test()
+    tw.test2()
