@@ -7,6 +7,17 @@ Perform the following:
 5. Write Key Notes from the summary as bullet points
 6. Write a Twitter blog post from the moderate summary with a focus on Gamestop."""
 
+UNCLE_SYSTEM_PROMPT_FINAL_JSON = UNCLE_SYSTEM_PROMPT_FINAL + """
+
+Return each bullet as json structure with following keys for each bullet:
+TITLE
+SUMMARY
+INFO
+SENTIMENT
+NOTES
+BLOG
+"""
+
 GENERIC_SYSTEM_PROMPT_FINAL = """You will receive a video transcript of a YouTube video recording. Perform the following:
 1. Create a title out of the main focus of the text.
 2. Write a moderate summary of the given summaries.
@@ -14,3 +25,13 @@ GENERIC_SYSTEM_PROMPT_FINAL = """You will receive a video transcript of a YouTub
 4. What is the general sentiment of the text? Format your answer as a list of lower-case words separated by commas.
 5. Write Key Notes from the summary as bullet points
 6. Write a Twitter blog post from the moderate summary."""
+
+GENERIC_SYSTEM_PROMPT_FINAL_JSON = GENERIC_SYSTEM_PROMPT_FINAL + """
+
+Return each bullet as json structure with following keys for each bullet:
+TITLE
+SUMMARY
+INFO
+SENTIMENT
+NOTES
+BLOG"""
