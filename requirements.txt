@@ -1,7 +1,7 @@
 Authlib==1.2.1
 backoff==2.2.1
 fastapi==0.104.1
-gradio==4.1.2
+gradio==5.0.1
 gradio_client==0.7.0
 itsdangerous==2.1.2
 oauthlib==3.2.2
