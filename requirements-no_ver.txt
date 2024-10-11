@@ -1,0 +1,13 @@
+Authlib
+backoff
+fastapi
+gradio
+gradio_client
+itsdangerous
+oauthlib
+openai
+requests-oauthlib
+tiktoken
+uvicorn
+youtube-transcript-api
+yt-dlp
