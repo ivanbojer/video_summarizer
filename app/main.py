@@ -14,8 +14,10 @@ from app import ignoreSSL
 from app import video_summarizer as vid
 from app import logger
 from app import my_prompt
+from app.mgr_tweeter import TweeterMgr
 
 OBFUSCATED_MNT_POINT = secrets.token_urlsafe(30)
+TRANSCRIBED_TXT_JSON = {}
 
 # Load config values
 with open(r"config.json") as config_file:
@@ -44,16 +46,34 @@ oauth.register(
 
 
 def summarize_text(video_id, final_prompt, progress=gr.Progress()):
+    global TRANSCRIBED_TXT_JSON
+
     progress(float(0.0), desc="Starting...")
     # summary = vid.test_load_final_summary()
 
-    summary, cost = vid.transcribe_video(
+    final_prompt = final_prompt + my_prompt.APPEND_JSON_PROMPT
+
+    json_string = vid.transcribe_video(
         video_id=video_id,
         final_prompt=final_prompt,
         progress=progress,
     )
 
-    return gr.Button(interactive=False), summary, gr.Markdown('*Incurred cost: ${}*'.format( cost ), show_label=False)
+    TRANSCRIBED_TXT_JSON = json_string
+
+    return gr.Button(interactive=False), json.dumps(json_string, indent=4, ensure_ascii=False), gr.Markdown('*Incurred cost: ${}*'.format( json_string['cost'] ), show_label=False)
+
+
+def tweet_text(output, progress=gr.Progress()):
+    global TRANSCRIBED_TXT_JSON
+
+    blog_title = TRANSCRIBED_TXT_JSON['TITLE']
+    blog_post = TRANSCRIBED_TXT_JSON['BLOG'] + f'\n\nRef: https://www.youtube.com/watch?v={TRANSCRIBED_TXT_JSON['video_id']}'
+
+    twtr = TweeterMgr()
+    twtr.post_tweet(blog_post, blog_title)
+
+    return gr.Button(interactive=False)
 
 
 def get_generic_prompt_template( btn ):
@@ -84,10 +104,10 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
             with gr.Group():
                 video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
                 final_prompt = gr.Textbox(
-                    label="Final prompt:", value=my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
+                    label="User prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
                 )
 
-            btn = gr.Button("Transcribe") 
+            btn_transcibe = gr.Button("Transcribe") 
             
             with gr.Blocks():
                         gr.Markdown('**Prompt examples**')
@@ -100,18 +120,24 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
 
             # summary output 
             with gr.Group():
-                out = gr.TextArea(label="Summary output:", lines=20)
+                out = gr.TextArea(label="Output:", lines=20)
             # video_id.change( update_label, inputs=video_id )
         
         with gr.Row():
             cost = gr.Markdown('*Incurred cost:*', show_label=False)
             gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, elem_classes='right-align')
+        btn_tweet = gr.Button("Tweet")
         gr.Markdown('[Logout](/logout)' ,show_label=False)
 
-        btn.click(
+        btn_transcibe.click(
                 fn=summarize_text,
                 inputs=[video_id, final_prompt],
-                outputs=[btn, out, cost])
+                outputs=[btn_transcibe, out, cost])
+        
+        btn_tweet.click(
+                fn=tweet_text,
+                inputs=[out],
+                outputs=[btn_tweet])
 
 
 app = FastAPI()

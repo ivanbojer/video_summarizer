@@ -140,7 +140,7 @@ def clean_up_temp_files():
         logger.logger.warning("No mp3 files: {}".format(e))
 
 
-def transcribe_video(video_id, final_prompt, json=False, progress=None):
+def transcribe_video(video_id, final_prompt, progress=None):
     transcript, transcript_raw = download_transcript(video_id, progress)
     
     # for debugging purposes
@@ -154,11 +154,6 @@ def transcribe_video(video_id, final_prompt, json=False, progress=None):
         )
     )
 
-    # # ### PROMPT TESTING
-    # summary_batches = HELPER.OPEN_FILE(FILE_SUMMARY_BATCHES_RESPONSES)
-    # summary_batches = HELPER.FIX_TEXT( summary_batches )
-    ###
-
     final_summary_txt = get_final_summary(
         text=transcript,
         prompt=final_prompt,
@@ -171,8 +166,10 @@ def transcribe_video(video_id, final_prompt, json=False, progress=None):
 
     cost = num_tokens/1000. * config_details2['PRICE_INPUT_1K_TOKENS'] + num_tokens_from_string( final_summary_txt )/1000. * config_details2['PRICE_OUTPUT_1K_TOKENS']
     cost = round(cost, 2)
-    if not json:
-        return final_summary_txt, cost
-    else:
-        json_str = {"video_id": video_id, "summary": final_summary_txt, "cost": cost}
-        return json.loads(json_str)
+    
+    json_str = json.loads(final_summary_txt)
+    json_str['video_id'] = video_id
+    json_str['cost'] = cost
+    # json_data = json.loads(json_str)
+    
+    return json_str
