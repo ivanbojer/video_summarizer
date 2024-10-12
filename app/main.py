@@ -68,16 +68,22 @@ def summarize_text(video_id, final_prompt, progress=gr.Progress()):
 def tweet_text(output, blog_selection, include_ref, progress=gr.Progress()):
     global TRANSCRIBED_TXT_JSON
 
-    ref = None
+    ref = ''
     if include_ref:
         ref = f'\n\nRef: https://www.youtube.com/watch?v={TRANSCRIBED_TXT_JSON['video_id']}'
 
 
     blog_title = TRANSCRIBED_TXT_JSON['TITLE']
-    blog_post = TRANSCRIBED_TXT_JSON[blog_selection] + ref
 
-    # twtr = TweeterMgr()
-    # twtr.post_tweet(blog_post, blog_title)
+    if type(TRANSCRIBED_TXT_JSON[blog_selection]) == list:
+        blog_post = '\n'.join( TRANSCRIBED_TXT_JSON[blog_selection] ) + ref
+    else:
+        blog_post = TRANSCRIBED_TXT_JSON[blog_selection] + ref
+
+    logger.logger.debug(f'Blog post: {blog_post}')
+
+    twtr = TweeterMgr()
+    twtr.post_tweet(blog_post, blog_title)
 
     return gr.Button(interactive=False)
 
@@ -175,7 +181,7 @@ async def add_process_time_header(request: Request, call_next):
     refresh_token = request.session.get("refresh_token")
 
     if not user or not access_token or not refresh_token:
-        logger.logger.warn("User is not authenticated, redirecting to login page")
+        logger.logger.warning("User is not authenticated, redirecting to login page")
         return RedirectResponse(url="/login")
 
     return await call_next(request)
