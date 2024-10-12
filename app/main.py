@@ -18,6 +18,7 @@ from app.mgr_tweeter import TweeterMgr
 
 OBFUSCATED_MNT_POINT = secrets.token_urlsafe(30)
 TRANSCRIBED_TXT_JSON = {}
+AUTHORIZED_USERS = os.getenv("AUTHORIZED_USERS") or None
 
 # Load config values
 with open(r"config.json") as config_file:
@@ -64,14 +65,19 @@ def summarize_text(video_id, final_prompt, progress=gr.Progress()):
     return gr.Button(interactive=False), json.dumps(json_string, indent=4, ensure_ascii=False), gr.Markdown('*Incurred cost: ${}*'.format( json_string['cost'] ), show_label=False)
 
 
-def tweet_text(output, progress=gr.Progress()):
+def tweet_text(output, blog_selection, include_ref, progress=gr.Progress()):
     global TRANSCRIBED_TXT_JSON
 
-    blog_title = TRANSCRIBED_TXT_JSON['TITLE']
-    blog_post = TRANSCRIBED_TXT_JSON['BLOG'] + f'\n\nRef: https://www.youtube.com/watch?v={TRANSCRIBED_TXT_JSON['video_id']}'
+    ref = None
+    if include_ref:
+        ref = f'\n\nRef: https://www.youtube.com/watch?v={TRANSCRIBED_TXT_JSON['video_id']}'
 
-    twtr = TweeterMgr()
-    twtr.post_tweet(blog_post, blog_title)
+
+    blog_title = TRANSCRIBED_TXT_JSON['TITLE']
+    blog_post = TRANSCRIBED_TXT_JSON[blog_selection] + ref
+
+    # twtr = TweeterMgr()
+    # twtr.post_tweet(blog_post, blog_title)
 
     return gr.Button(interactive=False)
 
@@ -126,7 +132,11 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
         with gr.Row():
             cost = gr.Markdown('*Incurred cost:*', show_label=False)
             gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, elem_classes='right-align')
-        btn_tweet = gr.Button("Tweet")
+
+        with gr.Column():
+            blog_selection = gr.Radio(["SUMMARY", "INFO", "NOTES", "BLOG"], label="", info="What to tweet?", value="BLOG")
+            include_ref = gr.Checkbox(label='Include refferenced video', value=True)
+            btn_tweet = gr.Button("Tweet")
         gr.Markdown('[Logout](/logout)' ,show_label=False)
 
         btn_transcibe.click(
@@ -136,7 +146,7 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
         
         btn_tweet.click(
                 fn=tweet_text,
-                inputs=[out],
+                inputs=[out, blog_selection, include_ref],
                 outputs=[btn_tweet])
 
 
@@ -144,7 +154,11 @@ app = FastAPI()
 
 
 def is_authorized(user_email):
-    return user_email in ["ivan@bojerco.com"]
+    if not AUTHORIZED_USERS:
+        return False
+    
+    auth_users_arr = AUTHORIZED_USERS.split(',')
+    return user_email in auth_users_arr
 
 
 @app.middleware("http")
