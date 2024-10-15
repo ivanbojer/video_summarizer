@@ -65,15 +65,16 @@ def summarize_text(video_id, final_prompt, progress=gr.Progress()):
     return gr.Button(interactive=False), json.dumps(json_string, indent=4, ensure_ascii=False), gr.Markdown('*Incurred cost: ${}*'.format( json_string['cost'] ), show_label=False)
 
 
-def tweet_text(output, blog_selection, include_ref, progress=gr.Progress()):
+def tweet_text(output, blog_selection, include_ref, include_title, progress=gr.Progress()):
     global TRANSCRIBED_TXT_JSON
 
     ref = ''
     if include_ref:
         ref = f'\n\nRef: https://www.youtube.com/watch?v={TRANSCRIBED_TXT_JSON['video_id']}'
 
-
-    blog_title = TRANSCRIBED_TXT_JSON['TITLE']
+    blog_title = ''
+    if include_title:
+        blog_title = TRANSCRIBED_TXT_JSON['TITLE']
 
     if type(TRANSCRIBED_TXT_JSON[blog_selection]) == list:
         blog_post = '\n'.join( TRANSCRIBED_TXT_JSON[blog_selection] ) + ref
@@ -142,6 +143,7 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
         with gr.Column():
             blog_selection = gr.Radio(["SUMMARY", "INFO", "NOTES", "BLOG"], label="", info="What to tweet?", value="BLOG")
             include_ref = gr.Checkbox(label='Include refferenced video', value=True)
+            include_title = gr.Checkbox(label='Include title', value=True)
             btn_tweet = gr.Button("Tweet")
         gr.Markdown('[Logout](/logout)' ,show_label=False)
 
@@ -152,7 +154,7 @@ with gr.Blocks(theme=gr.themes.Glass()) as demo:
         
         btn_tweet.click(
                 fn=tweet_text,
-                inputs=[out, blog_selection, include_ref],
+                inputs=[out, blog_selection, include_ref, include_title],
                 outputs=[btn_tweet])
 
 
