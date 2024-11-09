@@ -167,9 +167,4 @@ def transcribe_video(video_id, final_prompt, progress=None):
     cost = num_tokens/1000. * config_details2['PRICE_INPUT_1K_TOKENS'] + num_tokens_from_string( final_summary_txt )/1000. * config_details2['PRICE_OUTPUT_1K_TOKENS']
     cost = round(cost, 2)
     
-    json_str = json.loads(final_summary_txt)
-    json_str['video_id'] = video_id
-    json_str['cost'] = cost
-    # json_data = json.loads(json_str)
-    
-    return json_str
+    return final_summary_txt, cost

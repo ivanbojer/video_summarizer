@@ -16,8 +16,7 @@ from app import logger
 from app import my_prompt
 from app.mgr_tweeter import TweeterMgr
 
-OBFUSCATED_MNT_POINT = secrets.token_urlsafe(30)
-TRANSCRIBED_TXT_JSON = {}
+OBFUSCATED_MNT_POINT = secrets.token_urlsafe(30).replace('-', '')
 AUTHORIZED_USERS = os.getenv("AUTHORIZED_USERS") or None
 
 # Load config values
@@ -46,55 +45,45 @@ oauth.register(
 )
 
 
-def summarize_text(video_id, final_prompt, progress=gr.Progress()):
-    global TRANSCRIBED_TXT_JSON
-
+def summarize_text(video_id, final_prompt, tweet_box, progress=gr.Progress()):
     progress(float(0.0), desc="Starting...")
     # summary = vid.test_load_final_summary()
 
-    final_prompt = final_prompt + my_prompt.APPEND_JSON_PROMPT
-
-    json_string = vid.transcribe_video(
+    chatgpt_response, cost = vid.transcribe_video(
         video_id=video_id,
         final_prompt=final_prompt,
         progress=progress,
     )
 
-    TRANSCRIBED_TXT_JSON = json_string
+    text_to_tweet = chatgpt_response
+    start = chatgpt_response.find('Twitter Blog Post:\n')
 
-    return gr.Button(interactive=False), json.dumps(json_string, indent=4, ensure_ascii=False), gr.Markdown('*Incurred cost: ${}*'.format( json_string['cost'] ), show_label=False)
+    if start:
+        start = start + len('Twitter Blog Post:\n')
+        text_to_tweet = chatgpt_response[start:]
+
+    return gr.Markdown('*Incurred cost: ${}*'.format( cost ), show_label=False), chatgpt_response, text_to_tweet
 
 
-def tweet_text(output, blog_selection, include_ref, include_title, progress=gr.Progress()):
-    global TRANSCRIBED_TXT_JSON
-
-    ref = ''
+def tweet_text(tweet_box, include_ref, video_id, progress=gr.Progress()):
+    if not tweet_box:
+        logger.logger.warning('No text to tweet!')
+    
+    blog_post = tweet_box
     if include_ref:
-        ref = f'\n\nRef: https://www.youtube.com/watch?v={TRANSCRIBED_TXT_JSON['video_id']}'
+        ref = f'\n\nRef: https://www.youtube.com/watch?v={video_id}'
+        blog_post = blog_post + ref
 
-    blog_title = ''
-    if include_title:
-        blog_title = TRANSCRIBED_TXT_JSON['TITLE']
+    # twtr = TweeterMgr()
+    # twtr.post_tweet(blog_post)
 
-    if type(TRANSCRIBED_TXT_JSON[blog_selection]) == list:
-        blog_post = '\n'.join( TRANSCRIBED_TXT_JSON[blog_selection] ) + ref
-    else:
-        blog_post = TRANSCRIBED_TXT_JSON[blog_selection] + ref
+    logger.logger.info(f'Tweet posted!! --------->  {blog_post}')
 
-    logger.logger.debug(f'Blog post: {blog_post}')
-
-    twtr = TweeterMgr()
-    twtr.post_tweet(blog_post, blog_title)
-
-    return gr.Button(interactive=False)
-
-
-def get_generic_prompt_template( btn ):
+def update_prompt( template ):
+    if template == "Uncle Bruce":
+        return my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+    
     return my_prompt.GENERIC_SYSTEM_PROMPT_FINAL
-
-
-def get_uncle_prompt_template( btn ):
-    return my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
 
 
 CSS = """
@@ -112,50 +101,44 @@ YOUTUBE_URL = 'https://www.youtube.com/watch?v=[VIDEO_ID]'
 with gr.Blocks(theme=gr.themes.Glass()) as demo:
     with gr.Blocks():
         with gr.Column():
-
-            # input panels (left-side)
+            # input panels
             with gr.Group():
                 video_id = gr.Text(label='Video id ({}):'.format( YOUTUBE_URL ))
-                final_prompt = gr.Textbox(
-                    label="User prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
-                )
+                with gr.Column():
+                    final_prompt = gr.Textbox(
+                        label="User prompt:", value=my_prompt.UNCLE_SYSTEM_PROMPT_FINAL
+                    )
 
-            btn_transcibe = gr.Button("Transcribe") 
-            
-            with gr.Blocks():
-                        gr.Markdown('**Prompt examples**')
-                        with gr.Row():
-                            btn_gen = gr.Button('Generic', scale=0, size='sm')
-                            btn_bruce = gr.Button('Uncle Bruce', scale=0, size='sm')
-
-                        btn_gen.click(get_generic_prompt_template, inputs=None, outputs=[final_prompt])
-                        btn_bruce.click(get_uncle_prompt_template, inputs=None, outputs=[final_prompt])
+                    with gr.Row():
+                        dropdown = gr.Dropdown(label="Prompt examples", choices=["Generic", "Uncle Bruce"], value="Uncle Bruce")
+                        dropdown.change(update_prompt, inputs=dropdown, outputs=[final_prompt])
+                        
+                        btn_transcibe = gr.Button("Transcribe", size='lg') 
 
             # summary output 
             with gr.Group():
-                out = gr.TextArea(label="Output:", lines=20)
-            # video_id.change( update_label, inputs=video_id )
-        
-        with gr.Row():
-            cost = gr.Markdown('*Incurred cost:*', show_label=False)
-            gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, elem_classes='right-align')
+                with gr.Row():
+                    with gr.Column():
+                        chatgpt_response = gr.TextArea(label="ChatGPT Response:", lines=20)
+                        with gr.Row():
+                            cost = gr.Markdown('*Incurred cost:*', show_label=False)
+                            gr.Markdown('*Model: {}*'.format( config_details2["OA_CHAT_GPT_MODEL"] ) ,show_label=False, elem_classes='right-align')
+                    with gr.Column():
+                        tweet_box = gr.TextArea(label="Text to tweet:", lines=20)
+                        with gr.Row():
+                            include_ref = gr.Checkbox(label='Include refferenced video', value=False)
+                            btn_tweet = gr.Button("Tweet")
 
-        with gr.Column():
-            blog_selection = gr.Radio(["SUMMARY", "INFO", "NOTES", "BLOG"], label="", info="What to tweet?", value="BLOG")
-            include_ref = gr.Checkbox(label='Include refferenced video', value=True)
-            include_title = gr.Checkbox(label='Include title', value=True)
-            btn_tweet = gr.Button("Tweet")
         gr.Markdown('[Logout](/logout)' ,show_label=False)
 
         btn_transcibe.click(
                 fn=summarize_text,
                 inputs=[video_id, final_prompt],
-                outputs=[btn_transcibe, out, cost])
+                outputs=[cost, chatgpt_response, tweet_box])
         
         btn_tweet.click(
                 fn=tweet_text,
-                inputs=[out, blog_selection, include_ref, include_title],
-                outputs=[btn_tweet])
+                inputs=[tweet_box, include_ref, video_id])
 
 
 app = FastAPI()
