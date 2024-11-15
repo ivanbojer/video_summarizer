@@ -103,8 +103,10 @@ class TweeterMgr:
 
         if header:
             self.header = header
+        else:
+            self.header = ''
 
-        if len(text) > self.max_tweeet_size_characters - len(self.footer) - len(header):
+        if len(text) > self.max_tweeet_size_characters - len(self.footer) - len(self.header):
             return self.__post_tweet_in_chunks(text, fake_run)
         else:
             payload = {}
