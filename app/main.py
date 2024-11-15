@@ -74,8 +74,8 @@ def tweet_text(tweet_box, include_ref, video_id, progress=gr.Progress()):
         ref = f'\n\nRef: https://www.youtube.com/watch?v={video_id}'
         blog_post = blog_post + ref
 
-    # twtr = TweeterMgr()
-    # twtr.post_tweet(blog_post)
+    twtr = TweeterMgr()
+    twtr.post_tweet(blog_post)
 
     logger.logger.info(f'Tweet posted!! --------->  {blog_post}')
 
